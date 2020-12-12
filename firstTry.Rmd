@@ -1,0 +1,109 @@
+---
+title: "BKA_Kriminalstatistik_2019_data_analysis"
+author: "Peter von Bodelschwingh, Joshua Gawenda"
+date: "12 12 2020"
+output:
+  pdf_document: default
+  pdf: default
+---
+
+```{r setup, include=FALSE}
+library(readxl)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+# Introduction
+This dataset is taken from the  Bundeskriminalamt - the leading institution of crime detection in germany.
+The original dataset can be found here: 
+[BKA Dataset](https://www.bka.de/DE/AktuelleInformationen/StatistikenLagebilder/PolizeilicheKriminalstatistik/PKS2019/PKSTabellen/LandFalltabellen/landFalltabellen.html?nn=130872)
+
+It contains data about all crimes recorded in 2019. This analysis divides the statistics into all 16 german provinces. The goal of this analysis is to present the differences between these provinces by categories of crime, population, sucessful and non successfull enlisted crimes. Further documentation is provided in the "Interpretationshilfen" subfolder of this project. 
+
+
+
+
+## Import
+The first step we did was to divide the Overview Sheet into subsheets that contain all data by the province. In order to make sure the importing into R is done correctly, we removed line one til seven so only the Nr of the column is recognized as header. We also outsourced the description of the keys into a separate sheet to prevent a multiple import of the description column. The advantage of this practice is: we can use the total values of the origin sheet in order to test our sums which will be calculated by the province sheets.
+
+Origin datasheet: 
+```{r}
+oSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Origin")
+```
+
+Baden-Württemberg datasheet: 
+```{r}
+bawSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "BadenWuerttemberg")
+```
+
+Bayern datasheet: 
+```{r}
+bavSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Bayern")
+```
+
+Berlin datasheet: 
+```{r}
+berSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Berlin")
+```
+Brandenburg datasheet: 
+```{r}
+braSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Brandenburg")
+```
+Bremen datasheet: 
+```{r}
+breSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Bremen")
+```
+Hamburg datasheet: 
+```{r}
+hamSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Hamburg")
+```
+Hessen datasheet:
+```{r}
+hesSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Hessen")
+```
+Mecklenburg-Vorpommern datasheet: 
+```{r}
+mvpSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "MecklenburgVorpommern")
+```
+Niedersachsen datasheet: 
+```{r}
+ndsSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Niedersachsen")
+```
+Nordrhein-Westfalen datasheet:
+```{r}
+nrwSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "NordrheinWestfalen")
+```
+Rheinland-Pfalz datasheet: 
+```{r}
+rpfSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "RheinlandPfalz")
+```
+Saarland datasheet: 
+```{r}
+salSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Saarland")
+```
+Sachsen datasheet: 
+```{r}
+saxSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Sachsen")
+```
+Sachsen-Anhalt datasheet: 
+```{r}
+saaSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "SachsenAnhalt")
+```
+Schleswig-Holstein datasheet: 
+```{r}
+swhSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "SchleswigHolstein")
+```
+Thüringen datasheet: 
+```{r}
+thuSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Thueringen")
+```
+
+## Tidy
+## Transform
+## Visualise 
+## Model 
+
+
+
+
