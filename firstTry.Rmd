@@ -9,6 +9,8 @@ output:
 
 ```{r setup, include=FALSE}
 library(readxl)
+library(dplyr)
+library(GDINA)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -19,18 +21,25 @@ This dataset is taken from the  Bundeskriminalamt - the leading institution of c
 The original dataset can be found here: 
 [BKA Dataset](https://www.bka.de/DE/AktuelleInformationen/StatistikenLagebilder/PolizeilicheKriminalstatistik/PKS2019/PKSTabellen/LandFalltabellen/landFalltabellen.html?nn=130872)
 
-It contains data about all crimes recorded in 2019. This analysis divides the statistics into all 16 german provinces. The goal of this analysis is to present the differences between these provinces by categories of crime, population, sucessful and non successfull enlisted crimes. Further documentation is provided in the "Interpretationshilfen" subfolder of this project. 
+It contains data about all crimes recorded in 2019. This analysis divides the statistics into all 16 german provinces. The goal of this analysis is to present the differences between these provinces by categories of crime, population, sucessful and non successfull enlisted crimes. Further documentation is provided in the "Interpretationshilfen" subfolder of this project.  
 
-
+The original excel file can be found in this repository as well. See "OriginalDataSet". 
 
 
 ## Import
-The first step we did was to divide the Overview Sheet into subsheets that contain all data by the province. In order to make sure the importing into R is done correctly, we removed line one til seven so only the Nr of the column is recognized as header. We also outsourced the description of the keys into a separate sheet to prevent a multiple import of the description column. The advantage of this practice is: we can use the total values of the origin sheet in order to test our sums which will be calculated by the province sheets.
-
+The first step we did was to divide the Overview Sheet into subsheets that contain all data by the province. In order to make sure the importing into R is done correctly, we removed line one til seven so only the Nr of the column is recognized as header. We also outsourced the description of the keys into a separate sheet to prevent a multiple import of the description column. The advantage of this practice is: we can use the total values of the origin sheet in order to test our sums which are calculated by the province sheets. All obviously calculated columns (7,16 and 20)of the OriginalDataSet also got removed in order to improve the imports. 
+ 
+ 
 Origin datasheet: 
 ```{r}
-oSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Origin")
+oSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Total")
 ```
+
+Deutschland datasheet
+```{r}
+deSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Deutschland")
+```
+
 
 Baden-Württemberg datasheet: 
 ```{r}
@@ -100,6 +109,17 @@ thuSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Thueringen")
 ```
 
 ## Tidy
+First of all we proof that the sets do not contain any null values: 
+```{r}
+nonNullValue <- oSet %>% filter_at(vars(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21),any_vars(is.na(.)))
+nrow(nonNullValue)
+```
+
+
+Second: we proof that the sum of all datasets is equal to origin: 
+
+Third: we remove columns that can be calculated / TODO: do we have them? 
+
 ## Transform
 ## Visualise 
 ## Model 
