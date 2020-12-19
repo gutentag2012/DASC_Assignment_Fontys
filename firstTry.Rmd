@@ -27,93 +27,73 @@ The original excel file can be found in this repository as well. See "OriginalDa
 
 
 ## Import
-The first step we did was to divide the Overview Sheet into subsheets that contain all data by the province. In order to make sure the importing into R is done correctly, we removed line one til seven so only the Nr of the column is recognized as header. We also outsourced the description of the keys into a separate sheet to prevent a multiple import of the description column. The advantage of this practice is: we can use the total values of the origin sheet in order to test our sums which are calculated by the province sheets. All obviously calculated columns (7,16 and 20)of the OriginalDataSet also got removed in order to improve the imports. 
+The first step we did was to divide the Overview Sheet into subsheets that contain all data by the province. In order to make sure the importing into R is done correctly, we removed line one til seven so only the Nr of the column is recognized as header. 
  
+```{r}
+library(readxl)
+originalSet <- read_excel("DataSets/LA-F-01-T01-Laender-Faelle_xls.xlsx", 
+range = "A8:U18777") 
+
+```
+### Decouple
  
-Origin datasheet: 
+
+Germany datasheet
 ```{r}
-oSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Total")
+gerSet <- originalSet %>%  filter(grepl('3','Bundesrepublik Deutschland'))
+gerSet
 ```
 
-Deutschland datasheet
-```{r}
-deSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Deutschland")
-```
-
-
-Baden-Württemberg datasheet: 
-```{r}
-bawSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "BadenWuerttemberg")
-```
-
-Bayern datasheet: 
-```{r}
-bavSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Bayern")
-```
-
-Berlin datasheet: 
-```{r}
-berSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Berlin")
-```
-Brandenburg datasheet: 
-```{r}
-braSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Brandenburg")
-```
-Bremen datasheet: 
-```{r}
-breSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Bremen")
-```
-Hamburg datasheet: 
-```{r}
-hamSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Hamburg")
-```
-Hessen datasheet:
-```{r}
-hesSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Hessen")
-```
-Mecklenburg-Vorpommern datasheet: 
-```{r}
-mvpSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "MecklenburgVorpommern")
-```
-Niedersachsen datasheet: 
-```{r}
-ndsSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Niedersachsen")
-```
-Nordrhein-Westfalen datasheet:
-```{r}
-nrwSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "NordrheinWestfalen")
-```
-Rheinland-Pfalz datasheet: 
-```{r}
-rpfSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "RheinlandPfalz")
-```
-Saarland datasheet: 
-```{r}
-salSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Saarland")
-```
-Sachsen datasheet: 
-```{r}
-saxSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Sachsen")
-```
-Sachsen-Anhalt datasheet: 
-```{r}
-saaSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "SachsenAnhalt")
-```
-Schleswig-Holstein datasheet: 
-```{r}
-swhSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "SchleswigHolstein")
-```
-Thüringen datasheet: 
-```{r}
-thuSet <- read_excel("DataSets/OriginalDataSet.xlsx", sheet = "Thueringen")
-```
 
 ## Tidy
-First of all we proof that the sets do not contain any null values: 
+### Check non null
+First of all we proof that the original Set does not contain any null values: 
 ```{r}
-nonNullValue <- oSet %>% filter_at(vars(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21),any_vars(is.na(.)))
+nonNullValue <- originalSet %>% filter_at(vars(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21),any_vars(is.na(.)))
 nrow(nonNullValue)
 ```
+### Remove calculated columns
+Since we want to keep our analysis as performant as possible we also remove all calculated columns:
+```{r}
+originalSet <- originalSet %>% select('1':'4','15','6','8':'14','17':'20')
+```
+
+## Rename columns
+as you can see here the column names are not that descriptive anymore: 
+```{r}
+names(originalSet)
+```
+Thats why we are going to rename the columns back to the original name of the dataset now. 
+```{r}
+originalSet <- originalSet %>% 
+                rename(
+                  key = '1',
+                  crime = '2',
+                  province = '3',
+                  detected_cases = '4',
+                  not_executed_cases = '6',
+                  distribution_under_20K = '8',
+                  distribution_20K_to_100K = '9',
+                  distribution_100K_to_500K = '10',
+                  distribution_over_500K = '11',
+                  distribution_unknown = '12',
+                  gun_threatened = '13',
+                  gun_shot = '14',
+                  solved_cases = '15',
+                  suspects = '17',
+                  male = '18',
+                  female = '19',
+                  non_german ='20'
+                  )
+```
+
+
+
+
+## Creating subsets of the provinces
+After proving the set does not contain null values, we will remove all entrys that show total sums for germany and not for a province. See "
+
+
 
 
 Second: we proof that the sum of all datasets is equal to origin: 
