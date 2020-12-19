@@ -10,6 +10,8 @@ output:
 ```{r setup, include=FALSE}
 library(readxl)
 library(dplyr)
+library(sjmisc)
+library(tidyverse)
 library(GDINA)
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -31,31 +33,10 @@ The first step we did was to divide the Overview Sheet into subsheets that conta
  
 ```{r}
 library(readxl)
-originalSet <- read_excel("DataSets/LA-F-01-T01-Laender-Faelle_xls.xlsx", 
+originalSet <- read_excel("DataSets/PKS_crime_statistics.xlsx", sheet = "Data",
 range = "A8:U18777") 
+sumKeys <- read_excel("DataSets/PKS_crime_statistics.xlsx", sheet = "Sumkeys")
 
-```
-### Decouple
- 
-
-Germany datasheet
-```{r}
-gerSet <- originalSet %>%  filter(grepl('3','Bundesrepublik Deutschland'))
-gerSet
-```
-
-
-## Tidy
-### Check non null
-First of all we proof that the original Set does not contain any null values: 
-```{r}
-nonNullValue <- originalSet %>% filter_at(vars(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21),any_vars(is.na(.)))
-nrow(nonNullValue)
-```
-### Remove calculated columns
-Since we want to keep our analysis as performant as possible we also remove all calculated columns:
-```{r}
-originalSet <- originalSet %>% select('1':'4','15','6','8':'14','17':'20')
 ```
 
 ## Rename columns
@@ -71,7 +52,9 @@ originalSet <- originalSet %>%
                   crime = '2',
                   province = '3',
                   detected_cases = '4',
+                  detected_cases_percent = '5',
                   not_executed_cases = '6',
+                  not_executed_cases_percent = '7',
                   distribution_under_20K = '8',
                   distribution_20K_to_100K = '9',
                   distribution_100K_to_500K = '10',
@@ -80,14 +63,86 @@ originalSet <- originalSet %>%
                   gun_threatened = '13',
                   gun_shot = '14',
                   solved_cases = '15',
+                  solved_cases_percent = '16',
                   suspects = '17',
                   male = '18',
                   female = '19',
-                  non_german ='20'
+                  non_german ='20',
+                  non_german_percent = '21'
                   )
+```
+ 
+
+### Decouple
+Remove keys that determine sum values:
+TODO: add more documentation, explain sumkeys, explain retrieval process 
+First step: remove "N" values, some keys are safed as "NA", they will also be removed.
+```{r}
+sumKeys <- sumKeys %>% filter(grepl("Y",is_sum_key))
+```
+
+```{r}
+totalValues <- merge(originalSet,sumKeys,by = "key")
+totalValues <- totalValues %>% filter(grepl("Bundesrepublik Deutschland",province))
+sum(totalValues$detected_cases)
+```
+
+```{r}
+filteredKeys <- c()
+for (key1 in sumKeys$key) {
+  if (!key1 %in% filteredKeys) {
+    for (key2 in sumKeys$key) {
+      if (!key2 %in% filteredKeys) {
+        if (key1 != key2) {
+          if (regexpr(paste("^", str_remove(key2, "0+$"), sep = ""), key1)[1] == 1) {
+            filteredKeys <- append(filteredKeys, key2)
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+```{r}
+
+
+  totalValues <- subset(totalValues,totalValues$key %in% filteredKeys)
+
+sum(totalValues$detected_cases)
+```
+
+ 
+
+
+
+
+Outsource values assigned to germany as province into gerSet
+```{r}
+gerSet <- originalSet %>%  filter(grepl("Bundesrepublik Deutschland",province))
+originalSet <- originalSet %>% filter(!grepl("Bundesrepublik Deutschland",province))
+originalSet
 ```
 
 
+## Tidy
+### Check non null
+First of all we proof that the original Set does not contain any null values: 
+```{r}
+nonNullValue <- originalSet %>% filter_at(vars(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21),any_vars(is.na(.)))
+nrow(nonNullValue)
+```
+
+According to the three interrelated rules this set can be considered as tidy now because:
+    Each variable has its own column.
+    Each observation has its own row.
+    Each value has its own cell.
+
+### Remove calculated columns
+Since we want to keep our analysis as performant as possible we also remove all calculated columns:
+```{r}
+originalSet <- originalSet %>% select('1':'4','15','6','8':'14','17':'20')
+```
 
 
 ## Creating subsets of the provinces
@@ -98,7 +153,6 @@ After proving the set does not contain null values, we will remove all entrys th
 
 Second: we proof that the sum of all datasets is equal to origin: 
 
-Third: we remove columns that can be calculated / TODO: do we have them? 
 
 ## Transform
 ## Visualise 
