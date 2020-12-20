@@ -25,11 +25,11 @@ The original dataset can be found here:
 
 It contains data about all crimes recorded in 2019. This analysis divides the statistics into all 16 german provinces. The goal of this analysis is to present the differences between these provinces by categories of crime, population, sucessful and non successfull enlisted crimes. Further documentation is provided in the "Interpretationshilfen" subfolder of this project.  
 
-The original excel file can be found in this repository as well. See "OriginalDataSet". 
+The original excel file can be found in this repository as well. See "PKS_crime_statistics.xlsx". 
 
 
 ## Import
-The first step we did was to divide the Overview Sheet into subsheets that contain all data by the province. In order to make sure the importing into R is done correctly, we removed line one til seven so only the Nr of the column is recognized as header. 
+The first step we did was to divide the Overview Sheet into subsheets that contain all data by the province. In order to make sure the importing into R is done correctly, we removed line one til seven so only the Nr of the column is recognized as header, by limiting the range. 
  
 ```{r}
 library(readxl)
@@ -74,12 +74,32 @@ originalSet <- originalSet %>%
  
 
 ### Decouple
-Remove keys that determine sum values:
-TODO: add more documentation, explain sumkeys, explain retrieval process 
-First step: remove "N" values, some keys are safed as "NA", they will also be removed.
+
+First step: remove "N" values, some keys are safed as "NA", they will also be removed,because we keep "Y" values only.
 ```{r}
 sumKeys <- sumKeys %>% filter(grepl("Y",is_sum_key))
 ```
+
+
+
+Remove keys that determine sum values:
+TODO: add more documentation, explain sumkeys, explain retrieval process 
+
+```{r}
+filteredKeys <- c()
+visited <- c()
+for (key1 in sumKeys$key) {
+  visited <- append(visited, key1)
+  for (key2 in sumKeys$key) {
+    if (!key2 %in% visited) {
+      if (regexpr(paste("^", str_remove(key2, "0+$"), sep = ""), key1)[1] == 1) {
+        filteredKeys <- append(filteredKeys, key2)
+      }
+    }
+  }
+}
+```
+
 
 ```{r}
 totalValues <- merge(originalSet,sumKeys,by = "key")
@@ -88,26 +108,12 @@ sum(totalValues$detected_cases)
 ```
 
 ```{r}
-filteredKeys <- c()
-for (key1 in sumKeys$key) {
-  if (!key1 %in% filteredKeys) {
-    for (key2 in sumKeys$key) {
-      if (!key2 %in% filteredKeys) {
-        if (key1 != key2) {
-          if (regexpr(paste("^", str_remove(key2, "0+$"), sep = ""), key1)[1] == 1) {
-            filteredKeys <- append(filteredKeys, key2)
-          }
-        }
-      }
-    }
-  }
-}
-```
 
-```{r}
+# todo: change to remove 141100,231200,133000
+# add doc 
+  
 
-
-  totalValues <- subset(totalValues,totalValues$key %in% filteredKeys)
+  totalValues <- filter(totalValues,!(key %in% c("141100","231200","133000")))
 
 sum(totalValues$detected_cases)
 ```
