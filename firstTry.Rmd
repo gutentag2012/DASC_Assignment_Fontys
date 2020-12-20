@@ -35,7 +35,7 @@ The first step we did was to divide the Overview Sheet into subsheets that conta
 library(readxl)
 originalSet <- read_excel("DataSets/PKS_crime_statistics.xlsx", sheet = "Data",
 range = "A8:U18777") 
-sumKeys <- read_excel("DataSets/PKS_crime_statistics.xlsx", sheet = "Sumkeys")
+sumKeysImport <- read_excel("DataSets/PKS_crime_statistics.xlsx", sheet = "Sumkeys")
 
 ```
 
@@ -77,7 +77,8 @@ originalSet <- originalSet %>%
 
 First step: remove "N" values, some keys are safed as "NA", they will also be removed,because we keep "Y" values only.
 ```{r}
-sumKeys <- sumKeys %>% filter(grepl("Y",is_sum_key))
+singleKeys <- sumKeysImport %>% filter(grepl("Y",is_sum_key))
+sumKeys <- sumKeysImport %>% filter(!grepl("Y",is_sum_key))
 ```
 
 
@@ -88,9 +89,9 @@ TODO: add more documentation, explain sumkeys, explain retrieval process
 ```{r}
 filteredKeys <- c()
 visited <- c()
-for (key1 in sumKeys$key) {
+for (key1 in singleKeys$key) {
   visited <- append(visited, key1)
-  for (key2 in sumKeys$key) {
+  for (key2 in singleKeys$key) {
     if (!key2 %in% visited) {
       if (regexpr(paste("^", str_remove(key2, "0+$"), sep = ""), key1)[1] == 1) {
         filteredKeys <- append(filteredKeys, key2)
@@ -100,43 +101,63 @@ for (key1 in sumKeys$key) {
 }
 ```
 
-
 ```{r}
-totalValues <- merge(originalSet,sumKeys,by = "key")
-totalValues <- totalValues %>% filter(grepl("Bundesrepublik Deutschland",province))
-sum(totalValues$detected_cases)
+singleKeys <- sumKeysImport %>% filter(grepl("Y",is_sum_key) & !(key %in% c("141100","231200","133000")))
+sumKeys <- sumKeysImport %>% filter(!grepl("Y",is_sum_key) | (key %in% c("141100","231200","133000")))
 ```
 
+
+Manual check for real sum keys
 ```{r}
+singleValues <- merge(originalSet, singleKeys, by = "key")
+sumValues <- merge(originalSet, sumKeys, by = "key")
+``` 
 
-# todo: change to remove 141100,231200,133000
-# add doc 
-  
-
-  totalValues <- filter(totalValues,!(key %in% c("141100","231200","133000")))
-
-sum(totalValues$detected_cases)
-```
-
- 
-
-
-
-
-Outsource values assigned to germany as province into gerSet
 ```{r}
-gerSet <- originalSet %>%  filter(grepl("Bundesrepublik Deutschland",province))
-originalSet <- originalSet %>% filter(!grepl("Bundesrepublik Deutschland",province))
-originalSet
-```
+germanSingleSet <-
+  singleValues %>% filter(grepl("Bundesrepublik Deutschland", province))
+provinceSingleSet <-
+  singleValues %>% filter(!grepl("Bundesrepublik Deutschland", province))
 
+germanSumSet <-
+  sumValues %>% filter(grepl("Bundesrepublik Deutschland", province))
+provinceSumSet <-
+  sumValues %>% filter(!grepl("Bundesrepublik Deutschland", province))
+
+sum(germanSingleSet$detected_cases)
+sum(provinceSingleSet$detected_cases)
+sum(germanSumSet$detected_cases)
+sum(provinceSumSet$detected_cases)
+```
 
 ## Tidy
 ### Check non null
 First of all we proof that the original Set does not contain any null values: 
 ```{r}
-nonNullValue <- originalSet %>% filter_at(vars(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21),any_vars(is.na(.)))
-nrow(nonNullValue)
+nonNullValueOriginal <-
+  originalSet %>% filter_at(vars(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21),
+                            any_vars(is.na(.)))
+nrow(nonNullValueOriginal) == 0
+
+nonNullValueOriginal <-
+  germanSingleSet %>% filter_at(vars(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21),
+                            any_vars(is.na(.)))
+nrow(nonNullValueOriginal) == 0
+
+nonNullValueOriginal <-
+  provinceSingleSet %>% filter_at(vars(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21),
+                            any_vars(is.na(.)))
+nrow(nonNullValueOriginal) == 0
+
+nonNullValueOriginal <-
+  germanSumSet %>% filter_at(vars(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21),
+                            any_vars(is.na(.)))
+nrow(nonNullValueOriginal) == 0
+
+nonNullValueOriginal <-
+  provinceSumSet %>% filter_at(vars(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21),
+                            any_vars(is.na(.)))
+nrow(nonNullValueOriginal) == 0
 ```
 
 According to the three interrelated rules this set can be considered as tidy now because:
@@ -146,9 +167,17 @@ According to the three interrelated rules this set can be considered as tidy now
 
 ### Remove calculated columns
 Since we want to keep our analysis as performant as possible we also remove all calculated columns:
+
 ```{r}
-originalSet <- originalSet %>% select('1':'4','15','6','8':'14','17':'20')
+germanSingleSet <- 
+  germanSingleSet %>% select(1:4, 15, 6, 8:14, 17:20)
+provinceSingleSet <-
+  provinceSingleSet %>% select(1:4, 15, 6, 8:14, 17:20)
+
+germanSumSet <- germanSumSet %>% select(1:4, 15, 6, 8:14, 17:20)
+provinceSumSet <- provinceSumSet %>% select(1:4, 15, 6, 8:14, 17:20)
 ```
+
 
 
 ## Creating subsets of the provinces
