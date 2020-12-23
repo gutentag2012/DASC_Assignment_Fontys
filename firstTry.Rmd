@@ -8,44 +8,69 @@ output:
 ---
 
 ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
 library(readxl)
 library(dplyr)
 library(sjmisc)
 library(tidyverse)
+library(readxl)
 library(GDINA)
-knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# German crime statistics 2019 - A data analysis
 
+## Introduction
 
-# Introduction
-This dataset is taken from the  Bundeskriminalamt - the leading institution of crime detection in germany.
-The original dataset can be found here: 
-[BKA Dataset](https://www.bka.de/DE/AktuelleInformationen/StatistikenLagebilder/PolizeilicheKriminalstatistik/PKS2019/PKSTabellen/LandFalltabellen/landFalltabellen.html?nn=130872)
+In this data analysis we are going to take a look at the German crime statistics from the year 2019, the special version we are looking at also
+shows the crime distribution about different sized cities. The data is divided for all 16 German provinces and into a general section for the whole
+country. +
+There are also multiple files that help to determine what can be deducted from a data analysis of this set and what is out of scope. +
+The data set is taken from the  "Bundeskriminalamt" - the leading institution of crime detection in Germany. +
+The original data set can be found here: 
+[BKA Dataset](https://www.bka.de/DE/AktuelleInformationen/StatistikenLagebilder/PolizeilicheKriminalstatistik/PKS2019/PKSTabellen/LandFalltabellen/landFalltabellen.html) +
+This data set only shows absolute numbers for all provinces in Germany, so to make the statistics comparable over all the different provinces we
+also included another data set, that shows the number of inhabitants for every province and the whole country. +
+This data set can be found here:
+[German Inhabitants](https://www.destatis.de/DE/Themen/Laender-Regionen/Regionales/Gemeindeverzeichnis/Administrativ/02-bundeslaender.html) +
+Later you will see that we imported on more data set. This one is generated out of a PDF from the documentation for the first data set and therefore
+is not available in the format we have online. It holds information about the so called sum keys of the main data set and is later used to decouple
+the main data set.
 
-It contains data about all crimes recorded in 2019. This analysis divides the statistics into all 16 german provinces. The goal of this analysis is to present the differences between these provinces by categories of crime, population, sucessful and non successfull enlisted crimes. Further documentation is provided in the "Interpretationshilfen" subfolder of this project.  
+### Sum Keys
 
-The original excel file can be found in this repository as well. See "PKS_crime_statistics.xlsx". 
-
+To understand a big part of the analysis you have to understand what sum keys are, this is what we are going to describe in this chapter. +
+A key in the data set we use represents one type of crime, every crime has its own distinct key. Some crimes are just a composite of multiple other
+crimes, their key is then called a sum key, so every crime that is not a sum, has no children but only a parent crime. + 
+A key is made out of six digits, where every digit is read as a single one from left to right. In general every key that starts with the same digits 
+is part of the same sum key, the sum key is then identified with the same starting digits followed by zeros. However this is not true in every case, 
+some keys that end with zero have no children and therefore are no sum keys, the sum key for those keys is in most cases represented by a "*"-sign. +
+One general section of crimes is therefore represented by only the first digit. There are also two whole sections of keys that are only made out of
+sum keys and are used by the police to study different fields of crimes.
 
 ## Import
-The first step we did was to divide the Overview Sheet into subsheets that contain all data by the province. In order to make sure the importing into R is done correctly, we removed line one til seven so only the Nr of the column is recognized as header, by limiting the range. 
- 
-```{r}
-library(readxl)
-originalSet <- read_excel("DataSets/PKS_crime_statistics.xlsx", sheet = "Data",
-range = "A8:U18777") 
-sumKeysImport <- read_excel("DataSets/PKS_crime_statistics.xlsx", sheet = "Sumkeys")
 
+The first step to every data analysis is to import the data into your project. The data we chose is available as an excel file so we use the 
+package "readxl" to import the sets from excel. For the import to work properly we had to remove some unnecessary header lines in the main data
+set, we did that by specifying a "range" in the read_excel command. +
+The "SumKeys" data set was created by us, therefore every optimization for importing where made while creating the set. + 
+Finally we also import the data set for the inhabitants, since this data set is not part of the main analysis, we decided to also edit it in
+excel to optimize it for the import and remove data that we do not need for the analysis.
+ 
+```{R Import}
+originalSet <- read_excel("DataSets/PKS_crime_statistics.xlsx", sheet = "Data",range = "A8:U18777") 
+sumKeysImport <- read_excel("DataSets/PKS_crime_statistics.xlsx", sheet = "Sumkeys")
+germanInhabitants <- read_excel("DataSets/02-bundeslaender.xlsx", sheet = "inhabitants")
 ```
 
-## Rename columns
-as you can see here the column names are not that descriptive anymore: 
-```{r}
+
+### Renaming
+
+After the import, the names of the original data set got lost and are not very descriptive anymore.
+```{r Name_Display}
 names(originalSet)
 ```
-Thats why we are going to rename the columns back to the original name of the dataset now. 
-```{r}
+For easier use later in the analysis we rename the different columns in the next step. 
+```{r Renaming}
 originalSet <- originalSet %>% 
                 rename(
                   key = '1',
@@ -75,95 +100,119 @@ originalSet <- originalSet %>%
 
 ### Decouple
 
-First step: remove "N" values, some keys are safed as "NA", they will also be removed,because we keep "Y" values only.
-```{r}
-singleKeys <- sumKeysImport %>% filter(grepl("Y",is_sum_key))
+Like describe in the "Sum Key" section, the original data set is a mix of sum keys and capture keys. In order to not count twice in some operations
+we remove the sum keys from the capture keys, so the main analysis can focus on the capture keys. +
+The sum keys set that we imported has two columns, one for the key and one with the value "Y" for every capture key and a "N" for every sum key. The 
+two key sections that are only made out of sum keys are not reported in the set, so can be handled as "NA".
+
+```{r Filtering_Keys}
+captureKeys <- sumKeysImport %>% filter(grepl("Y",is_sum_key))
 sumKeys <- sumKeysImport %>% filter(!grepl("Y",is_sum_key))
 ```
 
+To check, that the keys after the filter are all correct, we created a small algorithm that checks for sum keys based on the the rules described in
+the "Sum Keys" chapter. The code takes a while to run, that is why we saved the result in a vector. 
 
-
-Remove keys that determine sum values:
-TODO: add more documentation, explain sumkeys, explain retrieval process 
-
-```{r}
-filteredKeys <- c()
-visited <- c()
-for (key1 in singleKeys$key) {
-  visited <- append(visited, key1)
-  for (key2 in singleKeys$key) {
-    if (!key2 %in% visited) {
-      if (regexpr(paste("^", str_remove(key2, "0+$"), sep = ""), key1)[1] == 1) {
-        filteredKeys <- append(filteredKeys, key2)
-      }
-    }
-  }
-}
+```{r Manual Sum_Key_Check}
+#filteredKeys <- c()
+#for (key1 in captureKeys$key) {
+#  if (!key1 %in% filteredKeys) {
+#    for (key2 in captureKeys$key) {
+#      if (!key2 %in% filteredKeys) {
+#        if (key1 != key2) {
+#          if (regexpr(paste("^", str_remove(key2, "0+$"), sep = ""), key1)[1] == 1) {
+#            filteredKeys <- append(filteredKeys, key2)
+#          }
+#        }
+#      }
+#    }
+#  }
+#}
+filteredKeys <- c("133000","141100","231200","305000","310000","315000","325000","326000","335000","340000","345000","350000","390000","435000","436000","620010","655010","670010","670020","670030")
 ```
 
-```{r}
-singleKeys <- sumKeysImport %>% filter(grepl("Y",is_sum_key) & !(key %in% c("141100","231200","133000")))
+After checking the resulting keys manually we found, that the keys "141100", "231200" and "133000" were marked as capture keys, but are sum keys,
+so these keys have to be removed from the capture keys and added to the sum keys.
+
+```{r Correct_Key_Filter}
+captureKeys <- sumKeysImport %>% filter(grepl("Y",is_sum_key) & !(key %in% c("141100","231200","133000")))
 sumKeys <- sumKeysImport %>% filter(!grepl("Y",is_sum_key) | (key %in% c("141100","231200","133000")))
 ```
 
+### Merge inhabitants
 
-Manual check for real sum keys
-```{r}
-singleValues <- merge(originalSet, singleKeys, by = "key")
-sumValues <- merge(originalSet, sumKeys, by = "key")
-``` 
+Before splitting the original data set after the sum keys and provinces we merged the number of inhabitants into the original data set.
 
-```{r}
-germanSingleSet <-
-  singleValues %>% filter(grepl("Bundesrepublik Deutschland", province))
-provinceSingleSet <-
-  singleValues %>% filter(!grepl("Bundesrepublik Deutschland", province))
+```{r Merge_Inhaitants}
+originalSet <- originalSet %>% merge(germanInhabitants, by = "province")
+originalSet <- arrange(originalSet, key)
+```
+
+### Filter final data frames
+
+First to reduce duplicate data, we filtered out all crime descriptions into its own data frame, to it can be looked up afterwards.
+
+```{r Crime_Frame}
+crimeOverview <- originalSet %>% select(key, crime) %>% unique()
+crimeOverview <- arrange(crimeOverview, key)
+head(crimeOverview)
+
+originalSet <- originalSet %>% select(!crime)
+```
+
+Merge the keys together with the original data set to separate the sum keys and the capture keys into separate data frames.
+
+```{r Merge_Keys}
+captureValues <- merge(originalSet, captureKeys) %>% select(!is_sum_key)
+sumValues <- merge(originalSet, sumKeys) %>% select(!is_sum_key)
+```
+
+With the sum keys now separated, we also divide both data frames into the values for the provinces and the values for whole Germany.
+
+```{r Separate_Province}
+germanCaptureSet <-
+  captureValues %>% filter(grepl("Bundesrepublik Deutschland", province))
+provinceCaptureSet <-
+  captureValues %>% filter(!grepl("Bundesrepublik Deutschland", province))
 
 germanSumSet <-
   sumValues %>% filter(grepl("Bundesrepublik Deutschland", province))
 provinceSumSet <-
   sumValues %>% filter(!grepl("Bundesrepublik Deutschland", province))
+```
 
-sum(germanSingleSet$detected_cases)
-sum(provinceSingleSet$detected_cases)
-sum(germanSumSet$detected_cases)
-sum(provinceSumSet$detected_cases)
+To check that the sum keys from before where separated correct we check that the sum of all detected cases in each German set is equal to the sum 
+for the detected cases in the province set.
+
+```{r Sum_Key_Check}
+sum(germanCaptureSet$detected_cases) == sum(provinceCaptureSet$detected_cases)
+sum(germanSumSet$detected_cases) == sum(provinceSumSet$detected_cases)
 ```
 
 ## Tidy
-### Check non null
-First of all we proof that the original Set does not contain any null values: 
-```{r}
-nonNullValueOriginal <-
-  originalSet %>% filter_at(vars(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21),
-                            any_vars(is.na(.)))
-nrow(nonNullValueOriginal) == 0
 
-nonNullValueOriginal <-
-  germanSingleSet %>% filter_at(vars(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21),
-                            any_vars(is.na(.)))
-nrow(nonNullValueOriginal) == 0
+After importing every data set and merging these together, they have to be tidied. We need to remove all columns that are not needed in the analysis
+and remove all values that hold errors, as well as create new columns with own calculated values.
 
-nonNullValueOriginal <-
-  provinceSingleSet %>% filter_at(vars(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21),
-                            any_vars(is.na(.)))
-nrow(nonNullValueOriginal) == 0
+### Check non NA
 
-nonNullValueOriginal <-
-  germanSumSet %>% filter_at(vars(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21),
-                            any_vars(is.na(.)))
-nrow(nonNullValueOriginal) == 0
+If the data set contains empty values they are marked as NA and have to be handled somehow. However, this data set has no such values as shown in the
+next code chunk. Here we filter for NA values in any column and check if the row count is 0 in the end.
 
-nonNullValueOriginal <-
-  provinceSumSet %>% filter_at(vars(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21),
-                            any_vars(is.na(.)))
-nrow(nonNullValueOriginal) == 0
+```{r NA_Check}
+nrow(filter_at(originalSet, 1:21, any_vars(is.na(.)))) == 0
+
+nrow(filter_at(crimeOverview, 1:2, any_vars(is.na(.)))) == 0
+
+nrow(filter_at(germanCaptureSet, 1:21, any_vars(is.na(.)))) == 0
+
+nrow(filter_at(provinceCaptureSet, 1:21, any_vars(is.na(.)))) == 0
+
+nrow(filter_at(germanSumSet, 1:21, any_vars(is.na(.)))) == 0
+
+nrow(filter_at(provinceSumSet, 1:21, any_vars(is.na(.)))) == 0
 ```
 
-According to the three interrelated rules this set can be considered as tidy now because:
-    Each variable has its own column.
-    Each observation has its own row.
-    Each value has its own cell.
 
 ### Remove calculated columns
 Since we want to keep our analysis as performant as possible we also remove all calculated columns:
@@ -178,6 +227,10 @@ germanSumSet <- germanSumSet %>% select(1:4, 15, 6, 8:14, 17:20)
 provinceSumSet <- provinceSumSet %>% select(1:4, 15, 6, 8:14, 17:20)
 ```
 
+```{r}
+provinceCaptureSet$province <- as.factor(provinceCaptureSet$province)
+provinceSumSet$province <- as.factor(provinceSumSet$province)
+```
 
 
 ## Creating subsets of the provinces
@@ -189,8 +242,55 @@ After proving the set does not contain null values, we will remove all entrys th
 Second: we proof that the sum of all datasets is equal to origin: 
 
 
+According to the three interrelated rules this set can be considered as tidy now because:
+    Each variable has its own column.
+    Each observation has its own row.
+    Each value has its own cell.
+    
+    
 ## Transform
+
 ## Visualise 
+```{r}
+options(scipen=999)
+```
+
+```{r}
+provinces <- factor(c("Baden-Württemberg","Bayern","Berlin","Brandenburg","Bremen","Hamburg","Hessen","Mecklenburg-Vorpommern","Niedersachsen","Nordrhein-Westfalen","Rheinland-Pfalz","Saarland","Sachsen","Sachsen-Anhalt","Schleswig-Holstein","Thüringen"))
+provinces
+```
+
+
+```{r}
+summary(provinceCaptureSet)
+```
+
+
+```{r}
+germanProvinceWithInhibs <- merge(provinceSingleSet,germanInhibitants, by="province")
+germanSingleWithInhibs <- merge(germanSingleSet,germanInhibitants, by="province")
+```
+
+```{r}
+lowSolvage <- filter(germanSingleWithInhibs, solved_cases/detected_cases > 0.9 & detected_cases/inhibitants > 0.00001)
+crimeOverview %>% filter(key %in% lowSolvage$key)
+```
+
+```{r}
+filter(crimeOverview, key == "731800")
+```
+
+
+```{r}
+ggplot(
+  data = filter(germanSingleWithInhibs, detected_cases/inhibitants > 0.001),
+  mapping = aes(detected_cases/inhibitants, solved_cases/detected_cases)) +
+  #geom_point() +
+  #geom_smooth(method="lm")
+  geom_text(mapping = aes(label = key))
+```
+
+
 ## Model 
 
 
