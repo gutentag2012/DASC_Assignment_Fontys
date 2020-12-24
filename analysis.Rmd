@@ -3,8 +3,10 @@ title: "BKA_Kriminalstatistik_2019_data_analysis"
 author: "Peter von Bodelschwingh, Joshua Gawenda"
 date: "12 12 2020"
 output:
-  pdf_document: default
+  html_document:
+    df_print: paged
   pdf: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -62,14 +64,11 @@ sumKeysImport <- read_excel("DataSets/PKS_crime_statistics.xlsx", sheet = "Sumke
 germanInhabitants <- read_excel("DataSets/02-bundeslaender.xlsx", sheet = "inhabitants")
 ```
 
-
 ### Renaming
 
-After the import, the names of the original data set got lost and are not very descriptive anymore.
-```{r Name_Display}
-names(originalSet)
-```
-For easier use later in the analysis we rename the different columns in the next step. 
+After the import, the names of the original data set got lost and are not descriptive anymore. To assure that the usage later on is more understandable
+we renamed the data set.
+
 ```{r Renaming}
 originalSet <- originalSet %>% 
                 rename(
@@ -97,6 +96,27 @@ originalSet <- originalSet %>%
                   )
 ```
  
+As a last step of importing, we can merge the inhabitants data frame into the original data frame for the analysis. This would allow to use the
+number of inhabitants easily in any calculation from here on.
+
+```{r Merge_Inhabitants}
+originalSet <- merge(originalSet, germanInhabitants, by = "province") %>% arrange(key)
+head(originalSet)
+```
+
+## Tidy
+
+This next step includes checking for missing values and in our case splitting the data frames up, so that the provinces are decoupled from the values
+for whole Germany. We also need to remove all sum keys from the actual capture keys.
+
+### Check non NA
+
+If the data set contains empty values they are marked as NA and have to be handled somehow. However, this data set has no such values as shown in the
+next code chunk. Here we filter for NA values in any column and check if the row count is 0 in the end.
+
+```{r NA_Check}
+nrow(filter_at(originalSet, 1:21, any_vars(is.na(.)))) == 0
+```
 
 ### Decouple
 
@@ -139,15 +159,6 @@ captureKeys <- sumKeysImport %>% filter(grepl("Y",is_sum_key) & !(key %in% c("14
 sumKeys <- sumKeysImport %>% filter(!grepl("Y",is_sum_key) | (key %in% c("141100","231200","133000")))
 ```
 
-### Merge inhabitants
-
-Before splitting the original data set after the sum keys and provinces we merged the number of inhabitants into the original data set.
-
-```{r Merge_Inhaitants}
-originalSet <- originalSet %>% merge(germanInhabitants, by = "province")
-originalSet <- arrange(originalSet, key)
-```
-
 ### Filter final data frames
 
 First to reduce duplicate data, we filtered out all crime descriptions into its own data frame, to it can be looked up afterwards.
@@ -159,10 +170,42 @@ head(crimeOverview)
 
 originalSet <- originalSet %>% select(!crime)
 ```
+    
+## Transform
 
-Merge the keys together with the original data set to separate the sum keys and the capture keys into separate data frames.
+In the final step before visualizing the data we need to check all the types of the values in each column an change them to a type that is usable
+for our analysis. We can also remove and create new Columns if necessary. In the end we are also splitting the original data frame up based on the
+provinces and the sum keys determined before.
 
-```{r Merge_Keys}
+### Transforming data types
+
+In this step we first check for the different data types we have in every column. We expect to have characters as the key, a factor for the provinces
+and every other column should be a number.
+
+```{r Type_Check}
+sapply(originalSet, class)
+```
+Except for the province all values have the type expected, the next step is to transform the province into a factor.
+
+```{r Factorize_Province}
+originalSet$province <- as.factor(originalSet$province) 
+sapply(originalSet, class)
+```
+
+### Remove calculated columns
+
+Some columns in the data set are just calculated from the given data, so to remove the possibility of a calculation error, we remove these columns
+and add them on our own, once they are needed in the analysis.
+
+```{r Select_Useful_Columns}
+originalSet <- originalSet %>% select(key, province, inhabitants, detected_cases, solved_cases, not_executed_cases, suspects, male, female, non_german, gun_threatened, gun_shot, distribution_under_20K, distribution_20K_to_100K, distribution_100K_to_500K, distribution_over_500K, distribution_unknown)
+```
+### Split up data
+
+This could also be part of the tidy step, but to reduce the amount of duplicate code for all checks, we split the data at the end. Therefore, we
+merge both key frames together with the original data set to separate the sum keys and the capture keys into separate data frames.
+
+```{r Split_Original_In_Sum_Capture}
 captureValues <- merge(originalSet, captureKeys) %>% select(!is_sum_key)
 sumValues <- merge(originalSet, sumKeys) %>% select(!is_sum_key)
 ```
@@ -188,92 +231,16 @@ for the detected cases in the province set.
 sum(germanCaptureSet$detected_cases) == sum(provinceCaptureSet$detected_cases)
 sum(germanSumSet$detected_cases) == sum(provinceSumSet$detected_cases)
 ```
-
-## Tidy
-
-After importing every data set and merging these together, they have to be tidied. We need to remove all columns that are not needed in the analysis
-and remove all values that hold errors, as well as create new columns with own calculated values.
-
-### Check non NA
-
-If the data set contains empty values they are marked as NA and have to be handled somehow. However, this data set has no such values as shown in the
-next code chunk. Here we filter for NA values in any column and check if the row count is 0 in the end.
-
-```{r NA_Check}
-nrow(filter_at(originalSet, 1:21, any_vars(is.na(.)))) == 0
-
-nrow(filter_at(crimeOverview, 1:2, any_vars(is.na(.)))) == 0
-
-nrow(filter_at(germanCaptureSet, 1:21, any_vars(is.na(.)))) == 0
-
-nrow(filter_at(provinceCaptureSet, 1:21, any_vars(is.na(.)))) == 0
-
-nrow(filter_at(germanSumSet, 1:21, any_vars(is.na(.)))) == 0
-
-nrow(filter_at(provinceSumSet, 1:21, any_vars(is.na(.)))) == 0
-```
-
-
-### Remove calculated columns
-Since we want to keep our analysis as performant as possible we also remove all calculated columns:
-
-```{r}
-germanSingleSet <- 
-  germanSingleSet %>% select(1:4, 15, 6, 8:14, 17:20)
-provinceSingleSet <-
-  provinceSingleSet %>% select(1:4, 15, 6, 8:14, 17:20)
-
-germanSumSet <- germanSumSet %>% select(1:4, 15, 6, 8:14, 17:20)
-provinceSumSet <- provinceSumSet %>% select(1:4, 15, 6, 8:14, 17:20)
-```
-
-```{r}
-provinceCaptureSet$province <- as.factor(provinceCaptureSet$province)
-provinceSumSet$province <- as.factor(provinceSumSet$province)
-```
-
-
-## Creating subsets of the provinces
-After proving the set does not contain null values, we will remove all entrys that show total sums for germany and not for a province. See "
-
-
-
-
-Second: we proof that the sum of all datasets is equal to origin: 
-
-
-According to the three interrelated rules this set can be considered as tidy now because:
-    Each variable has its own column.
-    Each observation has its own row.
-    Each value has its own cell.
     
-    
-## Transform
 
 ## Visualise 
 ```{r}
 options(scipen=999)
 ```
 
-```{r}
-provinces <- factor(c("Baden-Württemberg","Bayern","Berlin","Brandenburg","Bremen","Hamburg","Hessen","Mecklenburg-Vorpommern","Niedersachsen","Nordrhein-Westfalen","Rheinland-Pfalz","Saarland","Sachsen","Sachsen-Anhalt","Schleswig-Holstein","Thüringen"))
-provinces
-```
-
 
 ```{r}
-summary(provinceCaptureSet)
-```
-
-
-```{r}
-germanProvinceWithInhibs <- merge(provinceSingleSet,germanInhibitants, by="province")
-germanSingleWithInhibs <- merge(germanSingleSet,germanInhibitants, by="province")
-```
-
-```{r}
-lowSolvage <- filter(germanSingleWithInhibs, solved_cases/detected_cases > 0.9 & detected_cases/inhibitants > 0.00001)
-crimeOverview %>% filter(key %in% lowSolvage$key)
+plot(germanCaptureSet)
 ```
 
 ```{r}
@@ -283,8 +250,8 @@ filter(crimeOverview, key == "731800")
 
 ```{r}
 ggplot(
-  data = filter(germanSingleWithInhibs, detected_cases/inhibitants > 0.001),
-  mapping = aes(detected_cases/inhibitants, solved_cases/detected_cases)) +
+  data = filter(germanCaptureSet, detected_cases/inhabitants > 0.001),
+  mapping = aes(detected_cases/inhabitants, solved_cases/detected_cases)) +
   #geom_point() +
   #geom_smooth(method="lm")
   geom_text(mapping = aes(label = key))
