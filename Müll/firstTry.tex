@@ -1,0 +1,589 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  pdftitle={BKA\_Kriminalstatistik\_2019\_data\_analysis},
+  pdfauthor={Peter von Bodelschwingh, Joshua Gawenda},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+\urlstyle{same} % disable monospaced font for URLs
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx,grffile}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+
+\title{BKA\_Kriminalstatistik\_2019\_data\_analysis}
+\author{Peter von Bodelschwingh, Joshua Gawenda}
+\date{12 12 2020}
+
+\begin{document}
+\maketitle
+
+\hypertarget{german-crime-statistics-2019---a-data-analysis}{%
+\section{German crime statistics 2019 - A data
+analysis}\label{german-crime-statistics-2019---a-data-analysis}}
+
+\hypertarget{introduction}{%
+\subsection{Introduction}\label{introduction}}
+
+In this data analysis we are going to take a look at the German crime
+statistics from the year 2019, the special version we are looking at
+also shows the crime distribution about different sized cities. The data
+is divided for all 16 German provinces and into a general section for
+the whole country. + There are also multiple files that help to
+determine what can be deducted from a data analysis of this set and what
+is out of scope. + The data set is taken from the ``Bundeskriminalamt''
+- the leading institution of crime detection in Germany. + The original
+data set can be found here:
+\href{https://www.bka.de/DE/AktuelleInformationen/StatistikenLagebilder/PolizeilicheKriminalstatistik/PKS2019/PKSTabellen/LandFalltabellen/landFalltabellen.html}{BKA
+Dataset} + This data set only shows absolute numbers for all provinces
+in Germany, so to make the statistics comparable over all the different
+provinces we also included another data set, that shows the number of
+inhabitants for every province and the whole country. + This data set
+can be found here:
+\href{https://www.destatis.de/DE/Themen/Laender-Regionen/Regionales/Gemeindeverzeichnis/Administrativ/02-bundeslaender.html}{German
+Inhabitants} + Later you will see that we imported on more data set.
+This one is generated out of a PDF from the documentation for the first
+data set and therefore is not available in the format we have online. It
+holds information about the so called sum keys of the main data set and
+is later used to decouple the main data set.
+
+\hypertarget{sum-keys}{%
+\subsubsection{Sum Keys}\label{sum-keys}}
+
+To understand a big part of the analysis you have to understand what sum
+keys are, this is what we are going to describe in this chapter. + A key
+in the data set we use represents one type of crime, every crime has its
+own distinct key. Some crimes are just a composite of multiple other
+crimes, their key is then called a sum key, so every crime that is not a
+sum, has no children but only a parent crime. + A key is made out of six
+digits, where every digit is read as a single one from left to right. In
+general every key that starts with the same digits is part of the same
+sum key, the sum key is then identified with the same starting digits
+followed by zeros. However this is not true in every case, some keys
+that end with zero have no children and therefore are no sum keys, the
+sum key for those keys is in most cases represented by a "*"-sign. + One
+general section of crimes is therefore represented by only the first
+digit. There are also two whole sections of keys that are only made out
+of sum keys and are used by the police to study different fields of
+crimes.
+
+\hypertarget{import}{%
+\subsection{Import}\label{import}}
+
+The first step to every data analysis is to import the data into your
+project. The data we chose is available as an excel file so we use the
+package ``readxl'' to import the sets from excel. For the import to work
+properly we had to remove some unnecessary header lines in the main data
+set, we did that by specifying a ``range'' in the read\_excel command. +
+The ``SumKeys'' data set was created by us, therefore every optimization
+for importing where made while creating the set. + Finally we also
+import the data set for the inhabitants, since this data set is not part
+of the main analysis, we decided to also edit it in excel to optimize it
+for the import and remove data that we do not need for the analysis.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{originalSet <-}\StringTok{ }\KeywordTok{read_excel}\NormalTok{(}\StringTok{"DataSets/PKS_crime_statistics.xlsx"}\NormalTok{, }\DataTypeTok{sheet =} \StringTok{"Data"}\NormalTok{,}\DataTypeTok{range =} \StringTok{"A8:U18777"}\NormalTok{) }
+\NormalTok{sumKeysImport <-}\StringTok{ }\KeywordTok{read_excel}\NormalTok{(}\StringTok{"DataSets/PKS_crime_statistics.xlsx"}\NormalTok{, }\DataTypeTok{sheet =} \StringTok{"Sumkeys"}\NormalTok{)}
+\NormalTok{germanInhabitants <-}\StringTok{ }\KeywordTok{read_excel}\NormalTok{(}\StringTok{"DataSets/02-bundeslaender.xlsx"}\NormalTok{, }\DataTypeTok{sheet =} \StringTok{"inhabitants"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{renaming}{%
+\subsubsection{Renaming}\label{renaming}}
+
+After the import, the names of the original data set got lost and are
+not descriptive anymore. To assure that the usage later on is more
+understandable we renamed the data set.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{originalSet <-}\StringTok{ }\NormalTok{originalSet }\OperatorTok{%>%}\StringTok{ }
+\StringTok{                }\KeywordTok{rename}\NormalTok{(}
+                  \DataTypeTok{key =} \StringTok{'1'}\NormalTok{,}
+                  \DataTypeTok{crime =} \StringTok{'2'}\NormalTok{,}
+                  \DataTypeTok{province =} \StringTok{'3'}\NormalTok{,}
+                  \DataTypeTok{detected_cases =} \StringTok{'4'}\NormalTok{,}
+                  \DataTypeTok{detected_cases_percent =} \StringTok{'5'}\NormalTok{,}
+                  \DataTypeTok{not_executed_cases =} \StringTok{'6'}\NormalTok{,}
+                  \DataTypeTok{not_executed_cases_percent =} \StringTok{'7'}\NormalTok{,}
+                  \DataTypeTok{distribution_under_20K =} \StringTok{'8'}\NormalTok{,}
+                  \DataTypeTok{distribution_20K_to_100K =} \StringTok{'9'}\NormalTok{,}
+                  \DataTypeTok{distribution_100K_to_500K =} \StringTok{'10'}\NormalTok{,}
+                  \DataTypeTok{distribution_over_500K =} \StringTok{'11'}\NormalTok{,}
+                  \DataTypeTok{distribution_unknown =} \StringTok{'12'}\NormalTok{,}
+                  \DataTypeTok{gun_threatened =} \StringTok{'13'}\NormalTok{,}
+                  \DataTypeTok{gun_shot =} \StringTok{'14'}\NormalTok{,}
+                  \DataTypeTok{solved_cases =} \StringTok{'15'}\NormalTok{,}
+                  \DataTypeTok{solved_cases_percent =} \StringTok{'16'}\NormalTok{,}
+                  \DataTypeTok{suspects =} \StringTok{'17'}\NormalTok{,}
+                  \DataTypeTok{male =} \StringTok{'18'}\NormalTok{,}
+                  \DataTypeTok{female =} \StringTok{'19'}\NormalTok{,}
+                  \DataTypeTok{non_german =}\StringTok{'20'}\NormalTok{,}
+                  \DataTypeTok{non_german_percent =} \StringTok{'21'}
+\NormalTok{                  )}
+\end{Highlighting}
+\end{Shaded}
+
+As a last step of importing, we can merge the inhabitants data frame
+into the original data frame for the analysis. This would allow to use
+the number of inhabitants easily in any calculation from here on.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{originalSet <-}\StringTok{ }\KeywordTok{merge}\NormalTok{(originalSet, germanInhabitants, }\DataTypeTok{by =} \StringTok{"province"}\NormalTok{) }\OperatorTok{%>%}\StringTok{ }\KeywordTok{arrange}\NormalTok{(key)}
+\KeywordTok{head}\NormalTok{(originalSet)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                     province    key                crime detected_cases
+## 1          Baden-Württemberg ------ Straftaten insgesamt         573813
+## 2                     Bayern ------ Straftaten insgesamt         603464
+## 3                     Berlin ------ Straftaten insgesamt         513426
+## 4                Brandenburg ------ Straftaten insgesamt         171828
+## 5                     Bremen ------ Straftaten insgesamt          78228
+## 6 Bundesrepublik Deutschland ------ Straftaten insgesamt        5436401
+##   detected_cases_percent not_executed_cases not_executed_cases_percent
+## 1                    100              48562                        8.5
+## 2                    100              45581                        7.6
+## 3                    100              41505                        8.1
+## 4                    100              11278                        6.6
+## 5                    100               7288                        9.3
+## 6                    100             416594                        7.7
+##   distribution_under_20K distribution_20K_to_100K distribution_100K_to_500K
+## 1                 175726                   207084                    132301
+## 2                 235721                   141835                     64933
+## 3                      0                        0                         0
+## 4                  81968                    64415                     24717
+## 5                      0                        0                     12020
+## 6                1243451                  1451426                   1061629
+##   distribution_over_500K distribution_unknown gun_threatened gun_shot
+## 1                  54347                 4355            274      325
+## 2                 129814                31161            354      345
+## 3                 513426                    0            342      316
+## 4                      0                  728             88      124
+## 5                  65869                  339             67       43
+## 6                1569157               110738           4512     4639
+##   solved_cases solved_cases_percent suspects    male female non_german
+## 1       348664                 60.8   238737  182574  56163      96219
+## 2       404145                 67.0   289856  221025  68831     121928
+## 3       229532                 44.7   136704  100677  36027      61841
+## 4        96690                 56.3    65374   49299  16075      16303
+## 5        38118                 48.7    24101   18108   5993       9599
+## 6      3124161                 57.5  2019211 1514667 504544     699261
+##   non_german_percent inhabitants
+## 1               40.3    11100394
+## 2               42.1    13124737
+## 3               45.2     3669491
+## 4               24.9     2521893
+## 5               39.8      681202
+## 6               34.6    83166711
+\end{verbatim}
+
+\hypertarget{tidy}{%
+\subsection{Tidy}\label{tidy}}
+
+This next step includes checking for missing values and in our case
+splitting the data frames up, so that the provinces are decoupled from
+the values for whole Germany. We also need to remove all sum keys from
+the actual capture keys.
+
+\hypertarget{check-non-na}{%
+\subsubsection{Check non NA}\label{check-non-na}}
+
+If the data set contains empty values they are marked as NA and have to
+be handled somehow. However, this data set has no such values as shown
+in the next code chunk. Here we filter for NA values in any column and
+check if the row count is 0 in the end.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{nrow}\NormalTok{(}\KeywordTok{filter_at}\NormalTok{(originalSet, }\DecValTok{1}\OperatorTok{:}\DecValTok{21}\NormalTok{, }\KeywordTok{any_vars}\NormalTok{(}\KeywordTok{is.na}\NormalTok{(.)))) }\OperatorTok{==}\StringTok{ }\DecValTok{0}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] TRUE
+\end{verbatim}
+
+\hypertarget{decouple}{%
+\subsubsection{Decouple}\label{decouple}}
+
+Like describe in the ``Sum Key'' section, the original data set is a mix
+of sum keys and capture keys. In order to not count twice in some
+operations we remove the sum keys from the capture keys, so the main
+analysis can focus on the capture keys. + The sum keys set that we
+imported has two columns, one for the key and one with the value ``Y''
+for every capture key and a ``N'' for every sum key. The two key
+sections that are only made out of sum keys are not reported in the set,
+so can be handled as ``NA''.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{captureKeys <-}\StringTok{ }\NormalTok{sumKeysImport }\OperatorTok{%>%}\StringTok{ }\KeywordTok{filter}\NormalTok{(}\KeywordTok{grepl}\NormalTok{(}\StringTok{"Y"}\NormalTok{,is_sum_key))}
+\NormalTok{sumKeys <-}\StringTok{ }\NormalTok{sumKeysImport }\OperatorTok{%>%}\StringTok{ }\KeywordTok{filter}\NormalTok{(}\OperatorTok{!}\KeywordTok{grepl}\NormalTok{(}\StringTok{"Y"}\NormalTok{,is_sum_key))}
+\end{Highlighting}
+\end{Shaded}
+
+To check, that the keys after the filter are all correct, we created a
+small algorithm that checks for sum keys based on the the rules
+described in the ``Sum Keys'' chapter. The code takes a while to run,
+that is why we saved the result in a vector.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{#filteredKeys <- c()}
+\CommentTok{#for (key1 in captureKeys$key) \{}
+\CommentTok{#  if (!key1 %in% filteredKeys) \{}
+\CommentTok{#    for (key2 in captureKeys$key) \{}
+\CommentTok{#      if (!key2 %in% filteredKeys) \{}
+\CommentTok{#        if (key1 != key2) \{}
+\CommentTok{#          if (regexpr(paste("^", str_remove(key2, "0+$"), sep = ""), key1)[1] == 1) \{}
+\CommentTok{#            filteredKeys <- append(filteredKeys, key2)}
+\CommentTok{#          \}}
+\CommentTok{#        \}}
+\CommentTok{#      \}}
+\CommentTok{#    \}}
+\CommentTok{#  \}}
+\CommentTok{#\}}
+\NormalTok{filteredKeys <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"133000"}\NormalTok{,}\StringTok{"141100"}\NormalTok{,}\StringTok{"231200"}\NormalTok{,}\StringTok{"305000"}\NormalTok{,}\StringTok{"310000"}\NormalTok{,}\StringTok{"315000"}\NormalTok{,}\StringTok{"325000"}\NormalTok{,}\StringTok{"326000"}\NormalTok{,}\StringTok{"335000"}\NormalTok{,}\StringTok{"340000"}\NormalTok{,}\StringTok{"345000"}\NormalTok{,}\StringTok{"350000"}\NormalTok{,}\StringTok{"390000"}\NormalTok{,}\StringTok{"435000"}\NormalTok{,}\StringTok{"436000"}\NormalTok{,}\StringTok{"620010"}\NormalTok{,}\StringTok{"655010"}\NormalTok{,}\StringTok{"670010"}\NormalTok{,}\StringTok{"670020"}\NormalTok{,}\StringTok{"670030"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+After checking the resulting keys manually we found, that the keys
+``141100'', ``231200'' and ``133000'' were marked as capture keys, but
+are sum keys, so these keys have to be removed from the capture keys and
+added to the sum keys.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{captureKeys <-}\StringTok{ }\NormalTok{sumKeysImport }\OperatorTok{%>%}\StringTok{ }\KeywordTok{filter}\NormalTok{(}\KeywordTok{grepl}\NormalTok{(}\StringTok{"Y"}\NormalTok{,is_sum_key) }\OperatorTok{&}\StringTok{ }\OperatorTok{!}\NormalTok{(key }\OperatorTok{%in%}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"141100"}\NormalTok{,}\StringTok{"231200"}\NormalTok{,}\StringTok{"133000"}\NormalTok{)))}
+\NormalTok{sumKeys <-}\StringTok{ }\NormalTok{sumKeysImport }\OperatorTok{%>%}\StringTok{ }\KeywordTok{filter}\NormalTok{(}\OperatorTok{!}\KeywordTok{grepl}\NormalTok{(}\StringTok{"Y"}\NormalTok{,is_sum_key) }\OperatorTok{|}\StringTok{ }\NormalTok{(key }\OperatorTok{%in%}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"141100"}\NormalTok{,}\StringTok{"231200"}\NormalTok{,}\StringTok{"133000"}\NormalTok{)))}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{filter-final-data-frames}{%
+\subsubsection{Filter final data
+frames}\label{filter-final-data-frames}}
+
+First to reduce duplicate data, we filtered out all crime descriptions
+into its own data frame, to it can be looked up afterwards.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{crimeOverview <-}\StringTok{ }\NormalTok{originalSet }\OperatorTok{%>%}\StringTok{ }\KeywordTok{select}\NormalTok{(key, crime) }\OperatorTok{%>%}\StringTok{ }\KeywordTok{unique}\NormalTok{()}
+\NormalTok{crimeOverview <-}\StringTok{ }\KeywordTok{arrange}\NormalTok{(crimeOverview, key)}
+\KeywordTok{head}\NormalTok{(crimeOverview)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##      key
+## 1 ------
+## 2 ****00
+## 3 ***100
+## 4 ***200
+## 5 ***300
+## 6 ***400
+##                                                                               crime
+## 1                                                              Straftaten insgesamt
+## 2                                                     Diebstahl insgesamt und zwar:
+## 3             Diebstahl insgesamt von Kraftwagen einschl. unbefugte Ingebrauchnahme
+## 4 Diebstahl insgesamt von Mopeds und Krafträdern einschl. unbefugte Ingebrauchnahme
+## 5             Diebstahl insgesamt von Fahrrädern einschl. unbefugte Ingebrauchnahme
+## 6                                              Diebstahl insgesamt von Schusswaffen
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{originalSet <-}\StringTok{ }\NormalTok{originalSet }\OperatorTok{%>%}\StringTok{ }\KeywordTok{select}\NormalTok{(}\OperatorTok{!}\NormalTok{crime)}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{transform}{%
+\subsection{Transform}\label{transform}}
+
+In the final step before visualizing the data we need to check all the
+types of the values in each column an change them to a type that is
+usable for our analysis. We can also remove and create new Columns if
+necessary. In the end we are also splitting the original data frame up
+based on the provinces and the sum keys determined before.
+
+\hypertarget{transforming-data-types}{%
+\subsubsection{Transforming data types}\label{transforming-data-types}}
+
+In this step we first check for the different data types we have in
+every column. We expect to have characters as the key, a factor for the
+provinces and every other column should be a number.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{sapply}\NormalTok{(originalSet, class)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                   province                        key 
+##                "character"                "character" 
+##             detected_cases     detected_cases_percent 
+##                  "numeric"                  "numeric" 
+##         not_executed_cases not_executed_cases_percent 
+##                  "numeric"                  "numeric" 
+##     distribution_under_20K   distribution_20K_to_100K 
+##                  "numeric"                  "numeric" 
+##  distribution_100K_to_500K     distribution_over_500K 
+##                  "numeric"                  "numeric" 
+##       distribution_unknown             gun_threatened 
+##                  "numeric"                  "numeric" 
+##                   gun_shot               solved_cases 
+##                  "numeric"                  "numeric" 
+##       solved_cases_percent                   suspects 
+##                  "numeric"                  "numeric" 
+##                       male                     female 
+##                  "numeric"                  "numeric" 
+##                 non_german         non_german_percent 
+##                  "numeric"                  "numeric" 
+##                inhabitants 
+##                  "numeric"
+\end{verbatim}
+
+Except for the province all values have the type expected, the next step
+is to transform the province into a factor.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{originalSet}\OperatorTok{$}\NormalTok{province <-}\StringTok{ }\KeywordTok{as.factor}\NormalTok{(originalSet}\OperatorTok{$}\NormalTok{province) }
+\KeywordTok{sapply}\NormalTok{(originalSet, class)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                   province                        key 
+##                   "factor"                "character" 
+##             detected_cases     detected_cases_percent 
+##                  "numeric"                  "numeric" 
+##         not_executed_cases not_executed_cases_percent 
+##                  "numeric"                  "numeric" 
+##     distribution_under_20K   distribution_20K_to_100K 
+##                  "numeric"                  "numeric" 
+##  distribution_100K_to_500K     distribution_over_500K 
+##                  "numeric"                  "numeric" 
+##       distribution_unknown             gun_threatened 
+##                  "numeric"                  "numeric" 
+##                   gun_shot               solved_cases 
+##                  "numeric"                  "numeric" 
+##       solved_cases_percent                   suspects 
+##                  "numeric"                  "numeric" 
+##                       male                     female 
+##                  "numeric"                  "numeric" 
+##                 non_german         non_german_percent 
+##                  "numeric"                  "numeric" 
+##                inhabitants 
+##                  "numeric"
+\end{verbatim}
+
+\hypertarget{remove-calculated-columns}{%
+\subsubsection{Remove calculated
+columns}\label{remove-calculated-columns}}
+
+Some columns in the data set are just calculated from the given data, so
+to remove the possibility of a calculation error, we remove these
+columns and add them on our own, once they are needed in the analysis.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{originalSet <-}\StringTok{ }\NormalTok{originalSet }\OperatorTok{%>%}\StringTok{ }\KeywordTok{select}\NormalTok{(key, province, inhabitants, detected_cases, solved_cases, not_executed_cases, suspects, male, female, non_german, gun_threatened, gun_shot, distribution_under_20K, distribution_20K_to_100K, distribution_100K_to_500K, distribution_over_500K, distribution_unknown)}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{split-up-data}{%
+\subsubsection{Split up data}\label{split-up-data}}
+
+This could also be part of the tidy step, but to reduce the amount of
+duplicate code for all checks, we split the data at the end. Therefore,
+we merge both key frames together with the original data set to separate
+the sum keys and the capture keys into separate data frames.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{captureValues <-}\StringTok{ }\KeywordTok{merge}\NormalTok{(originalSet, captureKeys) }\OperatorTok{%>%}\StringTok{ }\KeywordTok{select}\NormalTok{(}\OperatorTok{!}\NormalTok{is_sum_key)}
+\NormalTok{sumValues <-}\StringTok{ }\KeywordTok{merge}\NormalTok{(originalSet, sumKeys) }\OperatorTok{%>%}\StringTok{ }\KeywordTok{select}\NormalTok{(}\OperatorTok{!}\NormalTok{is_sum_key)}
+\end{Highlighting}
+\end{Shaded}
+
+With the sum keys now separated, we also divide both data frames into
+the values for the provinces and the values for whole Germany.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{germanCaptureSet <-}
+\StringTok{  }\NormalTok{captureValues }\OperatorTok{%>%}\StringTok{ }\KeywordTok{filter}\NormalTok{(}\KeywordTok{grepl}\NormalTok{(}\StringTok{"Bundesrepublik Deutschland"}\NormalTok{, province))}
+\NormalTok{provinceCaptureSet <-}
+\StringTok{  }\NormalTok{captureValues }\OperatorTok{%>%}\StringTok{ }\KeywordTok{filter}\NormalTok{(}\OperatorTok{!}\KeywordTok{grepl}\NormalTok{(}\StringTok{"Bundesrepublik Deutschland"}\NormalTok{, province))}
+
+\NormalTok{germanSumSet <-}
+\StringTok{  }\NormalTok{sumValues }\OperatorTok{%>%}\StringTok{ }\KeywordTok{filter}\NormalTok{(}\KeywordTok{grepl}\NormalTok{(}\StringTok{"Bundesrepublik Deutschland"}\NormalTok{, province))}
+\NormalTok{provinceSumSet <-}
+\StringTok{  }\NormalTok{sumValues }\OperatorTok{%>%}\StringTok{ }\KeywordTok{filter}\NormalTok{(}\OperatorTok{!}\KeywordTok{grepl}\NormalTok{(}\StringTok{"Bundesrepublik Deutschland"}\NormalTok{, province))}
+\end{Highlighting}
+\end{Shaded}
+
+To check that the sum keys from before where separated correct we check
+that the sum of all detected cases in each German set is equal to the
+sum for the detected cases in the province set.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{sum}\NormalTok{(germanCaptureSet}\OperatorTok{$}\NormalTok{detected_cases) }\OperatorTok{==}\StringTok{ }\KeywordTok{sum}\NormalTok{(provinceCaptureSet}\OperatorTok{$}\NormalTok{detected_cases)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] TRUE
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{sum}\NormalTok{(germanSumSet}\OperatorTok{$}\NormalTok{detected_cases) }\OperatorTok{==}\StringTok{ }\KeywordTok{sum}\NormalTok{(provinceSumSet}\OperatorTok{$}\NormalTok{detected_cases)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] TRUE
+\end{verbatim}
+
+\hypertarget{visualise}{%
+\subsection{Visualise}\label{visualise}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{options}\NormalTok{(}\DataTypeTok{scipen=}\DecValTok{999}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{plot}\NormalTok{(germanCaptureSet)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{firstTry_files/figure-latex/unnamed-chunk-2-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{filter}\NormalTok{(crimeOverview, key }\OperatorTok{==}\StringTok{ "731800"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##      key                                              crime
+## 1 731800 Allgemeiner Verstoß mit Cannabis und Zubereitungen
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{ggplot}\NormalTok{(}
+  \DataTypeTok{data =} \KeywordTok{filter}\NormalTok{(germanCaptureSet, detected_cases}\OperatorTok{/}\NormalTok{inhabitants }\OperatorTok{>}\StringTok{ }\FloatTok{0.001}\NormalTok{),}
+  \DataTypeTok{mapping =} \KeywordTok{aes}\NormalTok{(detected_cases}\OperatorTok{/}\NormalTok{inhabitants, solved_cases}\OperatorTok{/}\NormalTok{detected_cases)) }\OperatorTok{+}
+\StringTok{  }\CommentTok{#geom_point() +}
+\StringTok{  }\CommentTok{#geom_smooth(method="lm")}
+\StringTok{  }\KeywordTok{geom_text}\NormalTok{(}\DataTypeTok{mapping =} \KeywordTok{aes}\NormalTok{(}\DataTypeTok{label =}\NormalTok{ key))}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{firstTry_files/figure-latex/unnamed-chunk-4-1.pdf}
+
+\hypertarget{model}{%
+\subsection{Model}\label{model}}
+
+\end{document}
