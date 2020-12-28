@@ -25,27 +25,27 @@ library(GDINA)
 
 In this data analysis we are going to take a look at the German crime statistics from the year 2019, the special version we are looking at also
 shows the crime distribution about different sized cities. The data is divided for all 16 German provinces and into a general section for the whole
-country. +
-There are also multiple files that help to determine what can be deducted from a data analysis of this set and what is out of scope. +
-The data set is taken from the  "Bundeskriminalamt" - the leading institution of crime detection in Germany. +
+country. \n
+There are also multiple files that help to determine what can be deducted from a data analysis of this set and what is out of scope. \n
+The data set is taken from the  "Bundeskriminalamt" - the leading institution of crime detection in Germany. \n
 The original data set can be found here: 
-[BKA Dataset](https://www.bka.de/DE/AktuelleInformationen/StatistikenLagebilder/PolizeilicheKriminalstatistik/PKS2019/PKSTabellen/LandFalltabellen/landFalltabellen.html) +
+[BKA Dataset](https://www.bka.de/DE/AktuelleInformationen/StatistikenLagebilder/PolizeilicheKriminalstatistik/PKS2019/PKSTabellen/LandFalltabellen/landFalltabellen.html) \n
 This data set only shows absolute numbers for all provinces in Germany, so to make the statistics comparable over all the different provinces we
-also included another data set, that shows the number of inhabitants for every province and the whole country. +
-This data set can be found here:
-[German Inhabitants](https://www.destatis.de/DE/Themen/Laender-Regionen/Regionales/Gemeindeverzeichnis/Administrativ/02-bundeslaender.html) +
+also included another data set, that shows the number of inhabitants for every province and the whole country. \n
+This data set can be found here: 
+[German Inhabitants](https://www.destatis.de/DE/Themen/Laender-Regionen/Regionales/Gemeindeverzeichnis/Administrativ/02-bundeslaender.html) \n
 Later you will see that we imported on more data set. This one is generated out of a PDF from the documentation for the first data set and therefore
 is not available in the format we have online. It holds information about the so called sum keys of the main data set and is later used to decouple
 the main data set.
 
 ### Sum Keys
 
-To understand a big part of the analysis you have to understand what sum keys are, this is what we are going to describe in this chapter. +
+To understand a big part of the analysis you have to understand what sum keys are, this is what we are going to describe in this chapter. \n
 A key in the data set we use represents one type of crime, every crime has its own distinct key. Some crimes are just a composite of multiple other
-crimes, their key is then called a sum key, so every crime that is not a sum, has no children but only a parent crime. + 
+crimes, their key is then called a sum key, so every crime that is not a sum, has no children but only a parent crime. \n 
 A key is made out of six digits, where every digit is read as a single one from left to right. In general every key that starts with the same digits 
 is part of the same sum key, the sum key is then identified with the same starting digits followed by zeros. However this is not true in every case, 
-some keys that end with zero have no children and therefore are no sum keys, the sum key for those keys is in most cases represented by a "*"-sign. +
+some keys that end with zero have no children and therefore are no sum keys, the sum key for those keys is in most cases represented by a "*"-sign. \n
 One general section of crimes is therefore represented by only the first digit. There are also two whole sections of keys that are only made out of
 sum keys and are used by the police to study different fields of crimes.
 
@@ -53,8 +53,8 @@ sum keys and are used by the police to study different fields of crimes.
 
 The first step to every data analysis is to import the data into your project. The data we chose is available as an excel file so we use the 
 package "readxl" to import the sets from excel. For the import to work properly we had to remove some unnecessary header lines in the main data
-set, we did that by specifying a "range" in the read_excel command. +
-The "SumKeys" data set was created by us, therefore every optimization for importing where made while creating the set. + 
+set, we did that by specifying a "range" in the read_excel command. \n
+The "SumKeys" data set was created by us, therefore every optimization for importing where made while creating the set. \n 
 Finally we also import the data set for the inhabitants, since this data set is not part of the main analysis, we decided to also edit it in
 excel to optimize it for the import and remove data that we do not need for the analysis.
  
@@ -121,7 +121,7 @@ nrow(filter_at(originalSet, 1:21, any_vars(is.na(.)))) == 0
 ### Decouple
 
 Like describe in the "Sum Key" section, the original data set is a mix of sum keys and capture keys. In order to not count twice in some operations
-we remove the sum keys from the capture keys, so the main analysis can focus on the capture keys. +
+we remove the sum keys from the capture keys, so the main analysis can focus on the capture keys. \n
 The sum keys set that we imported has two columns, one for the key and one with the value "Y" for every capture key and a "N" for every sum key. The 
 two key sections that are only made out of sum keys are not reported in the set, so can be handled as "NA".
 
@@ -231,17 +231,264 @@ for the detected cases in the province set.
 sum(germanCaptureSet$detected_cases) == sum(provinceCaptureSet$detected_cases)
 sum(germanSumSet$detected_cases) == sum(provinceSumSet$detected_cases)
 ```
-    
 
-## Visualise 
-```{r}
+```{r, echo=FALSE}
 options(scipen=999)
 ```
+    
+## Visualise 
+############################
+############################
+Steps:
+1. Detected vs Solved
+2. Detected/Solved vs Suspects
+3. Suspects vs Male/Female/Non_German
+4. Distribution
+5. Funny Rankings for the end (inhabitants from provinces) -> filter out the 6 top categories (first letter in key)
+############################
+############################
+
+Once the data is imported, tidied and transformed the analysis can start. To first get a general impression over the data that we have, we
+used the standard plot command, that creates a simple chart for every column. The data frame that we use for all of the next instructions
+is the one with only the values for whole Germany. We first want to find correlations in there and then check for them in the single
+provinces as well. \n
+To make the first general data analysis more readable, we need to remove the outliers in the data. All the data in this data set is bound to the 
+number of detected cases, so if the number of detected cases is 0 all other columns will also be 0 and the other way around, if there is a high
+number of detected cases, the possibility of high numbers in the other columns is pretty high (Those cases will be analyzed later on). \n
+To now find the number of detected cases where there are the most cases, we find the mean of detected cases. To do that we use the summary
+function of R.
+
+```{r Find_Cases_Mean}
+summary(germanCaptureSet$detected_cases)
+```
+
+Now we just filter out all rows where the number of detected cases is larger than 7172. For now we are also not interested in the rows where there
+are no cases, so we also filter out those.
+
+```{r Filter_For_Number}
+germanNonZeroSet <- filter(germanCaptureSet, detected_cases > 0 & detected_cases <= 7172)
+```
+
+To now get a general view on how the data is structured across the data frame we use the plot command, that creates simple plots for every
+column in the frame.
+
+```{r}
+plot(germanNonZeroSet, main = "General Overview", col = "#000000", pch = 19)
+```
+
+Based on these plots we analyze different correlations of data in the data frame. The first thing that we noticed was, that there seems to be a relation
+between the number of detected cases and the number of solved cases. Next we enlarge this plot and filter out all rows where the number of solved cases
+is larger than the number of detected cases, because those would be part of a measurement error.
+
+```{r Solvage_Rate}
+filtered <- filter(germanNonZeroSet, detected_cases >= solved_cases)
+plot(germanCaptureSet$detected_cases, germanCaptureSet$solved_cases, 
+     col = "#cc0000",
+     pch = 19,
+     main = "Detected vs. Solved",
+     xlab = "Solved Cases",
+     ylab = "Detected Cases")
+abline(lm(germanCaptureSet$solved_cases~germanCaptureSet$detected_cases)) #Draw better line
+```
 
 
 ```{r}
-plot(germanCaptureSet)
+cor(germanCaptureSet$detected_cases,germanCaptureSet$solved_cases)
 ```
+
+```{r}
+plot(filtered$solved_cases, filtered$suspects, 
+     col = "#cc0000",
+     pch = 19)
+abline(lm(filtered$suspects~filtered$solved_cases))
+```
+
+
+```{r}
+plot(filtered$detected_cases, filtered$solved_cases/filtered$detected_cases, 
+     col = "#cc0000",
+     pch = 19,
+     main = "Solvage Rate vs. Detected Cases", 
+     ylab = "Solvage Rate (in percent)",
+     xlab = "Detected Cases")
+```
+
+Note: Points underneath the line are suspected many times
+Note: One case -> one person that did it (every one in the case gets its own law suite)
+```{r Suspects_Per_Case}
+par(mfrow=c(3,1))
+filtered <- filter(germanNonZeroSet, detected_cases >= solved_cases)
+plot(filtered$detected_cases, filtered$suspects, 
+     xlim = c(0,8000),
+     ylim = c(0,8000),
+     col = "#cc0000",
+     pch = 19,
+     main = "Suspects per Detected Case",
+     xlab = "Detected Cases",
+     ylab = "Suspects")
+abline(coef = c(0,1))
+
+plot(filtered$solved_cases, filtered$suspects, 
+     xlim = c(0,8000),
+     ylim = c(0,8000),
+     col = "#cc0000",
+     pch = 19,
+     main = "Suspects per Solved Case",
+     xlab = "Solved Cases",
+     ylab = "Suspects")
+abline(coef = c(0,1))
+plot(filtered$solved_cases, filtered$suspects, 
+     xlim = c(0,8000),
+     ylim = c(0,8000),
+     col = "#cc0000",
+     pch = 19,
+     main = "Suspects per Solved Case",
+     xlab = "Solved Cases",
+     ylab = "Suspects")
+abline(coef = c(0,1))
+par(mfrow=c(1,1))
+```
+
+```{r}
+par(mfrow=c(3,2))
+plot(filtered$distribution_under_20K, filtered$detected_cases, 
+     xlim = c(0, 7000),
+     ylim = c(0, 7000),
+     col = "#cc0000",
+     pch = 19,
+     main = "Suspects per Solved Case",
+     xlab = "Cases in City (under 20K inhibitants)",
+     ylab = "Detected Cases")
+abline(coef = c(0,1))
+plot(filtered$distribution_20K_to_100K, filtered$detected_cases, 
+     xlim = c(0, 7000),
+     ylim = c(0, 7000),
+     col = "#cc0000",
+     pch = 19,
+     main = "Suspects per Solved Case",
+     xlab = "Cases in City (20k - 100K inhibitants)",
+     ylab = "Detected Cases")
+abline(coef = c(0,1))
+plot(filtered$distribution_100K_to_500K, filtered$detected_cases, 
+     xlim = c(0, 7000),
+     ylim = c(0, 7000),
+     col = "#cc0000",
+     pch = 19,
+     main = "Suspects per Solved Case",
+     xlab = "Cases in City (100k - 500K inhibitants)",
+     ylab = "Detected Cases")
+abline(coef = c(0,1))
+plot(filtered$distribution_over_500K, filtered$detected_cases, 
+     xlim = c(0, 7000),
+     ylim = c(0, 7000),
+     col = "#cc0000",
+     pch = 19,
+     main = "Suspects per Solved Case",
+     xlab = "Cases in City (over 500K inhibitants)",
+     ylab = "Detected Cases")
+abline(coef = c(0,1))
+plot(filtered$distribution_unknown, filtered$detected_cases, 
+     xlim = c(0, 7000),
+     ylim = c(0, 7000),
+     col = "#cc0000",
+     pch = 19,
+     main = "Suspects per Solved Case",
+     xlab = "Cases in City (unknown inhibitants)",
+     ylab = "Detected Cases")
+abline(coef = c(0,1))
+plot(filtered$distribution_unknown, filtered$detected_cases, 
+     xlim = c(0, 7000),
+     ylim = c(0, 7000),
+     col = "#cc0000",
+     pch = 19,
+     main = "Suspects per Solved Case",
+     xlab = "Cases in City (unknown inhibitants)",
+     ylab = "Detected Cases")
+par(mfrow=c(1,1))
+```
+
+```{r}
+par(mfrow=c(3,2))
+plot(germanNonZeroSet$suspects, germanNonZeroSet$male,
+     xlim=c(0,8000),
+     ylim=c(0,8000),
+     col="#cc0000",
+     pch = 19,
+     main = "Suspects vs Male",
+     xlab = "Suspects",
+     ylab = "Male Suspects")
+abline(coef = c(0,1))
+plot(germanNonZeroSet$solved_cases, germanNonZeroSet$male,
+     xlim=c(0,8000),
+     ylim=c(0,8000),
+     col="#cc0000",
+     pch = 19,
+     main = "Suspects vs Male",
+     xlab = "Suspects",
+     ylab = "Male Suspects")
+abline(coef = c(0,1))
+plot(germanNonZeroSet$suspects, germanNonZeroSet$female,
+     xlim=c(0,8000),
+     ylim=c(0,8000),
+     col="#cc0000",
+     pch = 19,
+     main = "Suspects vs Female",
+     xlab = "Suspects",
+     ylab = "Female Suspects")
+abline(coef = c(0,1))
+plot(germanNonZeroSet$suspects, germanNonZeroSet$non_german,
+     xlim=c(0,8000),
+     ylim=c(0,8000),
+     col="#cc0000",
+     pch = 19,
+     main = "Suspects vs Non German",
+     xlab = "Suspects",
+     ylab = "Non German Suspects")
+abline(coef = c(0,1))
+plot(germanNonZeroSet$male, germanNonZeroSet$non_german,
+     xlim=c(0,8000),
+     ylim=c(0,8000),
+     col="#cc0000",
+     pch = 19,
+     main = "Suspects vs Male",
+     xlab = "Suspects",
+     ylab = "Male Suspects")
+abline(coef = c(0,1))
+plot(germanNonZeroSet$suspects, germanNonZeroSet$male,
+     xlim=c(0,8000),
+     ylim=c(0,8000),
+     col="#cc0000",
+     pch = 19,
+     main = "Suspects vs Male",
+     xlab = "Suspects",
+     ylab = "Male Suspects")
+abline(coef = c(0,1))
+par(mfrow=c(1,1))
+```
+
+```{r}
+reg <- lm(germanNonZeroSet$male~germanNonZeroSet$suspects)
+summary(reg)
+cor(germanNonZeroSet$suspects, germanNonZeroSet$male)
+```
+
+
+
+
+```{r}
+par(mfrow=c(2,2))
+plot(germanCaptureSet$suspects, germanCaptureSet$male, main = "Something", ylab = "Suspects", xlab = "Male")
+plot(germanCaptureSet$suspects, germanCaptureSet$female, main = "Something", ylab = "Suspects", xlab = "Female")
+plot(germanCaptureSet$suspects, germanCaptureSet$non_german, main = "Something", ylab = "Suspects", xlab = "Non German")
+plot(germanCaptureSet$suspects, germanCaptureSet$solved_cases, xlim=c(0,150000), ylim=c(0,150000), main = "Something", ylab = "Suspects", xlab = "Cases")
+
+par(mfrow=c(1,1))
+```
+
+```{r}
+filter(merge(germanCaptureSet, crimeOverview, by="key"), suspects/detected_cases >= 0.9 & suspects/detected_cases <= 1.1)
+```
+
 
 ```{r}
 filter(crimeOverview, key == "731800")
