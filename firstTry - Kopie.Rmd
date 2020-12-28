@@ -283,5 +283,96 @@ summary(germanSingleSet$suspects)
 
 ```
 
+# zunächst die graphische Darstellung mittels Punktwolke 
+```{r}
+plot(germanSingleSet$detected_cases, germanSingleSet$solved_cases, xlab = "Detected cases", ylab = "Solved cases",
+     #main = "", xlim = c(35,47), ylim = c(150,195), pch = 20) 
+  , pch = 20) 
+     
+```
+
+# die einfache lineare Regression lässt sich über den sehr 
+# wichtigen (und mächtigen) Befehl 'lm()' (linear model)
+# anpassen; mit diesem Befehl lassen sich eine Unmenge an statistischen
+# Modellen durchführen, indem eine 'Formel' spezifiziert wird
+# allgemein hat der Befehl folgende Struktur: lm(<Kriteriumsvariable> ~ <Prädiktor(en)>)
+
+# wir wollen nun die einfache lineare Regression durchführen und 
+# das Ergebnis in dem Objekt 'reg' speichern
+```{r}
+reg<-lm(germanSingleSet$detected_cases ~ germanSingleSet$solved_cases)
+
+```
+
+# was bekommt man?
+```{r}
+reg 
+```
+
+# dieses Objekt enthält offenbar den Schnittpunkt der zugehörigen Regressionsgerade
+# mit der y-Achse (Intercept) und den Anstieg der Regressionsgerade (mit dem Namen
+# der Prädiktorvariable bezeichnet)
+
+# zur Kontrolle: wenn man Anstieg (a) und Achsenabschnitt (b) 'per Hand'
+# berechnet (siehe letztes Semester), kommt man zu genau diesen Werten
+```{r}
+a<-cov(germanSingleSet$detected_cases, germanSingleSet$solved_cases)/var(germanSingleSet$solved_cases)
+b<-mean(germanSingleSet$detected_cases) - a*mean(germanSingleSet$solved_cases)
+
+```
+
+
+# das Objekt 'reg' lässt sich auch einfach in den bereits aus den Übungsaufgaben
+# bekannten Befehl 'abline()' einsetzen, um die Regressionsgerade in die 
+# bereits erstellte Punktwolke einzuzeichnen
+```{r}
+abline(reg)
+
+```
+
+# das Objekt 'reg' (also das Ergebnis der angepassten einfachen lin. Regression)
+# enthält jedoch noch vieles mehr
+# was alles enthalten ist (quasi ein Überblick über das angepasste Modell)
+# lässt sich mit Hilfe des Bereits bekannten Befehls 'summary()' anzeigen
+```{r}
+summary(reg)
+
+```
+
+# das meiste davon brauchen wir an dieser Stelle noch nicht (es werden u.a.
+# die Ergebnisse von Signifikanztests über Anstieg und Achsenabschnitt
+# der Regressionsgerade durchgeführt, mehr dazu später), was Sie aber vielleicht
+# wiedererkennen, ist (neben einer Übersicht zu den Residuen zu Beginn) 
+# der Determinationskoeffizient, der hier unter 'Multiple R-squared'
+# aufgeführt ist 
+# -> ca. 77% der Varianz der Körpergröße wird durch das Regressionsmodell 'erklärt'
+
+# die Struktur dieses Objektes 'reg' ist eine sogenannte Liste, die komplexeste Art
+# von Objekten in R; 
+str(reg)
+
+# anschaulich kann man sich eine Liste als ein Objekt vorstellen,
+# das als Elemente selbst wieder Objekte haben kann
+
+# wir können uns hier zum Beispiel sämtliche 'vorhergesagten Werte' y_dach
+# anzeigen lassen 
+```{r}
+reg$fitted.values
+
+```
+
+# oder die zugehörigen Residuen = Fehler (Abweichung der Geraden)
+```{r}
+reg$residuals
+
+```
+
+# wir können also auch einen Residuenplot erstellen
+```{r}
+plot(daten$Schuhgröße,reg$residuals, pch = 20, ylab = "Residuen", xlab = "Schuhgröße")
+abline(h = 0)
+
+```
+
 
 
