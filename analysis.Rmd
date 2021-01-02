@@ -17,6 +17,12 @@ library(sjmisc)
 library(tidyverse)
 library(readxl)
 library(GDINA)
+#install.packages("geojsonio")
+#install.packages("mapproj")
+#install.packages("scales")
+library(geojsonio)
+library(broom)
+#library(scales)
 ```
 
 # German crime statistics 2019 - A data analysis
@@ -25,27 +31,27 @@ library(GDINA)
 
 In this data analysis we are going to take a look at the German crime statistics from the year 2019, the special version we are looking at also
 shows the crime distribution about different sized cities. The data is divided for all 16 German provinces and into a general section for the whole
-country. \n
-There are also multiple files that help to determine what can be deducted from a data analysis of this set and what is out of scope. \n
-The data set is taken from the  "Bundeskriminalamt" - the leading institution of crime detection in Germany. \n
+country. <br/>
+There are also multiple files that help to determine what can be deducted from a data analysis of this set and what is out of scope. <br/>
+The data set is taken from the  "Bundeskriminalamt" - the leading institution of crime detection in Germany. <br/>
 The original data set can be found here: 
-[BKA Dataset](https://www.bka.de/DE/AktuelleInformationen/StatistikenLagebilder/PolizeilicheKriminalstatistik/PKS2019/PKSTabellen/LandFalltabellen/landFalltabellen.html) \n
+[BKA Dataset](https://www.bka.de/DE/AktuelleInformationen/StatistikenLagebilder/PolizeilicheKriminalstatistik/PKS2019/PKSTabellen/LandFalltabellen/landFalltabellen.html) <br/>
 This data set only shows absolute numbers for all provinces in Germany, so to make the statistics comparable over all the different provinces we
-also included another data set, that shows the number of inhabitants for every province and the whole country. \n
+also included another data set, that shows the number of inhabitants for every province and the whole country. <br/>
 This data set can be found here: 
-[German Inhabitants](https://www.destatis.de/DE/Themen/Laender-Regionen/Regionales/Gemeindeverzeichnis/Administrativ/02-bundeslaender.html) \n
+[German Inhabitants](https://www.destatis.de/DE/Themen/Laender-Regionen/Regionales/Gemeindeverzeichnis/Administrativ/02-bundeslaender.html) <br/>
 Later you will see that we imported on more data set. This one is generated out of a PDF from the documentation for the first data set and therefore
 is not available in the format we have online. It holds information about the so called sum keys of the main data set and is later used to decouple
 the main data set.
 
 ### Sum Keys
 
-To understand a big part of the analysis you have to understand what sum keys are, this is what we are going to describe in this chapter. \n
+To understand a big part of the analysis you have to understand what sum keys are, this is what we are going to describe in this chapter. <br/>
 A key in the data set we use represents one type of crime, every crime has its own distinct key. Some crimes are just a composite of multiple other
-crimes, their key is then called a sum key, so every crime that is not a sum, has no children but only a parent crime. \n 
+crimes, their key is then called a sum key, so every crime that is not a sum, has no children but only a parent crime. <br/> 
 A key is made out of six digits, where every digit is read as a single one from left to right. In general every key that starts with the same digits 
 is part of the same sum key, the sum key is then identified with the same starting digits followed by zeros. However this is not true in every case, 
-some keys that end with zero have no children and therefore are no sum keys, the sum key for those keys is in most cases represented by a "*"-sign. \n
+some keys that end with zero have no children and therefore are no sum keys, the sum key for those keys is in most cases represented by a "*"-sign. <br/>
 One general section of crimes is therefore represented by only the first digit. There are also two whole sections of keys that are only made out of
 sum keys and are used by the police to study different fields of crimes.
 
@@ -53,8 +59,8 @@ sum keys and are used by the police to study different fields of crimes.
 
 The first step to every data analysis is to import the data into your project. The data we chose is available as an excel file so we use the 
 package "readxl" to import the sets from excel. For the import to work properly we had to remove some unnecessary header lines in the main data
-set, we did that by specifying a "range" in the read_excel command. \n
-The "SumKeys" data set was created by us, therefore every optimization for importing where made while creating the set. \n 
+set, we did that by specifying a "range" in the read_excel command. <br/>
+The "SumKeys" data set was created by us, therefore every optimization for importing where made while creating the set. <br/> 
 Finally we also import the data set for the inhabitants, since this data set is not part of the main analysis, we decided to also edit it in
 excel to optimize it for the import and remove data that we do not need for the analysis.
  
@@ -121,7 +127,7 @@ nrow(filter_at(originalSet, 1:21, any_vars(is.na(.)))) == 0
 ### Decouple
 
 Like describe in the "Sum Key" section, the original data set is a mix of sum keys and capture keys. In order to not count twice in some operations
-we remove the sum keys from the capture keys, so the main analysis can focus on the capture keys. \n
+we remove the sum keys from the capture keys, so the main analysis can focus on the capture keys. <br/>
 The sum keys set that we imported has two columns, one for the key and one with the value "Y" for every capture key and a "N" for every sum key. The 
 two key sections that are only made out of sum keys are not reported in the set, so can be handled as "NA".
 
@@ -163,6 +169,20 @@ sumKeys <- sumKeysImport %>% filter(!grepl("Y",is_sum_key) | (key %in% c("141100
 
 First to reduce duplicate data, we filtered out all crime descriptions into its own data frame, to it can be looked up afterwards.
 
+```{r Category}
+crimeCategories <-
+  originalSet %>% filter(grepl("[0-9]0{5}", key)) %>%
+  select(key, crime) %>%
+  unique() %>%
+  mutate(key = str_replace_all(key, "00000", ""))
+
+originalSet <- originalSet %>% 
+  mutate(category = substring(key, 1,1)) %>% 
+  select(category, !category) %>% 
+  mutate(category = ifelse(category%in%crimeCategories$key,crimeCategories[as.integer(category)+1,2],"Other"))
+```
+
+
 ```{r Crime_Frame}
 crimeOverview <- originalSet %>% select(key, crime) %>% unique()
 crimeOverview <- arrange(crimeOverview, key)
@@ -189,8 +209,23 @@ Except for the province all values have the type expected, the next step is to t
 
 ```{r Factorize_Province}
 originalSet$province <- as.factor(originalSet$province) 
+originalSet$category <- as.factor(originalSet$category)
+
 sapply(originalSet, class)
 ```
+
+```{r}
+c1 <- levels(originalSet$category)[1]
+c2 <- levels(originalSet$category)[2]
+c3 <- levels(originalSet$category)[3]
+c4 <- levels(originalSet$category)[4]
+c5 <- levels(originalSet$category)[5]
+c6 <- levels(originalSet$category)[6]
+c7 <- levels(originalSet$category)[7]
+c8 <- levels(originalSet$category)[8]
+c9 <- levels(originalSet$category)[9]
+```
+
 
 ### Remove calculated columns
 
@@ -198,12 +233,23 @@ Some columns in the data set are just calculated from the given data, so to remo
 and add them on our own, once they are needed in the analysis.
 
 ```{r Select_Useful_Columns}
-originalSet <- originalSet %>% select(key, province, inhabitants, detected_cases, solved_cases, not_executed_cases, suspects, male, female, non_german, gun_threatened, gun_shot, distribution_under_20K, distribution_20K_to_100K, distribution_100K_to_500K, distribution_over_500K, distribution_unknown)
+originalSet <- originalSet %>% select(key, category, province, inhabitants, detected_cases, solved_cases, not_executed_cases, suspects, male, female, non_german, gun_threatened, gun_shot, distribution_under_20K, distribution_20K_to_100K, distribution_100K_to_500K, distribution_over_500K, distribution_unknown)
 ```
 ### Split up data
 
 This could also be part of the tidy step, but to reduce the amount of duplicate code for all checks, we split the data at the end. Therefore, we
 merge both key frames together with the original data set to separate the sum keys and the capture keys into separate data frames.
+
+```{r Province_Id include=FALSE}
+province_ids <- data.frame (province = c("Baden-Württemberg","Bayern","Berlin","Brandenburg","Bremen","Hamburg","Hessen","Mecklenburg-Vorpommern","Niedersachsen","Nordrhein-Westfalen","Rheinland-Pfalz","Saarland","Sachsen-Anhalt","Sachsen","Schleswig-Holstein","Thüringen", "Bundesrepublik Deutschland"),
+                  province_id = c("1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16", "17"))
+originalSet <- originalSet %>% merge(province_ids, by = "province")
+```
+
+```{r NA_Check}
+originalSet %>% filter_at(vars(1:19), any_vars(is.na(.)))
+```
+
 
 ```{r Split_Original_In_Sum_Capture}
 captureValues <- merge(originalSet, captureKeys) %>% select(!is_sum_key)
@@ -232,11 +278,60 @@ sum(germanCaptureSet$detected_cases) == sum(provinceCaptureSet$detected_cases)
 sum(germanSumSet$detected_cases) == sum(provinceSumSet$detected_cases)
 ```
 
+## Prepare Map
+
+Before our analysis can start, we want to display some data on a map, with all German provinces. In this step we prepare the empty map, so that it can
+easily be used later on.
+
+```{r}
+province_json <- geojson_read("provinces.json", what = "sp")
+empty_map <- tidy(province_json, area = "code") %>% mutate(province_id = id)
+
+ggplot(empty_map, aes(long, lat, group = group)) +
+  geom_polygon(fill="white", color="grey") +
+  theme_void() +
+  coord_map()
+```
+
+
+
 ```{r, echo=FALSE}
 options(scipen=999)
 ```
     
-## Visualise 
+## Analyse 
+
+Once the data is imported, tidied and transformed the analysis can start. To first get a general impression over the data that we have, we
+used the standard plot command, that creates a simple chart for every column. The data frame that we use for all of the next instructions
+is the one with only the values for whole Germany. We first want to find correlations in there. <br/>
+To make the first general data analysis more readable, we need to remove the outliers in the data. All the data in this data set is bound to the 
+number of detected cases, so if the number of detected cases is 0 all other columns will also be 0 and the other way around, if there is a high
+number of detected cases, the possibility of high numbers in the other columns is pretty high (Those cases will be analyzed later on). <br/>
+To find the number of detected cases where there are the most cases, we find the mean of detected cases. To do that we use the summary
+function of R.
+
+```{r Find_Cases_Mean}
+summary(germanCaptureSet$detected_cases)
+```
+
+Now we just filter out all rows where the number of detected cases is larger than 7172. For now we are also not interested in the rows where there
+are no cases, so we also filter out those.
+
+```{r Filter_For_Number}
+cutSet <- filter(germanCaptureSet, detected_cases > 0 & detected_cases <= 7172)
+summary(cutSet$detected_cases)
+```
+
+To now get a general view on how the data is structured across the data frame we use the plot command, that creates simple plots for every
+column in the frame.
+
+```{r}
+plot(cutSet, main = "General Overview", col = "#000000", pch = 19)
+```
+
+Based on these plots we found a few interesting correlations of data that we now are going to discuss in detail.
+
+
 ############################
 ############################
 Steps:
@@ -248,48 +343,171 @@ Steps:
 ############################
 ############################
 
-Once the data is imported, tidied and transformed the analysis can start. To first get a general impression over the data that we have, we
-used the standard plot command, that creates a simple chart for every column. The data frame that we use for all of the next instructions
-is the one with only the values for whole Germany. We first want to find correlations in there and then check for them in the single
-provinces as well. \n
-To make the first general data analysis more readable, we need to remove the outliers in the data. All the data in this data set is bound to the 
-number of detected cases, so if the number of detected cases is 0 all other columns will also be 0 and the other way around, if there is a high
-number of detected cases, the possibility of high numbers in the other columns is pretty high (Those cases will be analyzed later on). \n
-To now find the number of detected cases where there are the most cases, we find the mean of detected cases. To do that we use the summary
-function of R.
+### Detected Cases vs Solved Cases
 
-```{r Find_Cases_Mean}
-summary(germanCaptureSet$detected_cases)
+The first thing that we noticed was, that there seems to be a relation between the number of detected cases and the number of solved cases. 
+Next we enlarge this plot and filter out all rows where the number of solved cases is larger than the number of detected cases, because those would 
+be part of a measurement error. We again also remove those cases where the number of detected cases is 0.
+
+```{r Filter_Impossible_Solvage_Rate}
+filtered <- filter(germanCaptureSet, detected_cases >= solved_cases & detected_cases > 0)
 ```
-
-Now we just filter out all rows where the number of detected cases is larger than 7172. For now we are also not interested in the rows where there
-are no cases, so we also filter out those.
-
-```{r Filter_For_Number}
-germanNonZeroSet <- filter(germanCaptureSet, detected_cases > 0 & detected_cases <= 7172)
-```
-
-To now get a general view on how the data is structured across the data frame we use the plot command, that creates simple plots for every
-column in the frame.
-
-```{r}
-plot(germanNonZeroSet, main = "General Overview", col = "#000000", pch = 19)
-```
-
-Based on these plots we analyze different correlations of data in the data frame. The first thing that we noticed was, that there seems to be a relation
-between the number of detected cases and the number of solved cases. Next we enlarge this plot and filter out all rows where the number of solved cases
-is larger than the number of detected cases, because those would be part of a measurement error.
 
 ```{r Solvage_Rate}
-filtered <- filter(germanNonZeroSet, detected_cases >= solved_cases)
-plot(germanCaptureSet$detected_cases, germanCaptureSet$solved_cases, 
-     col = "#cc0000",
-     pch = 19,
-     main = "Detected vs. Solved",
-     xlab = "Solved Cases",
-     ylab = "Detected Cases")
-abline(lm(germanCaptureSet$solved_cases~germanCaptureSet$detected_cases)) #Draw better line
+ggplot(filtered, aes(detected_cases, solved_cases, color = category)) +
+  geom_point(show.legend = T) +
+  geom_smooth(method = "lm", fullrange = T, show.legend = F) +
+  geom_abline(coef = c(0, 1)) +
+  labs(title = "Detected vs. Solved", y = "Solved Cases", x ="Detected Cases")
 ```
+
+This plot shows the relation between detected and solved cases for each major crime category.
+The black line displayed in this plot shows the optimal line, where the number of detected cases is equal to the number of solved cases, so those crimes
+where every case was solved. The closer a dot or a colored line is to this line, the higher is the solvage rate for the specific crime. <br/>
+Lets now take a closer look at the different solvage rates.
+
+```{r Calc_Solvage_Rate}
+filtered <- filtered %>% mutate(solvage_rate = solved_cases/detected_cases*100)
+ggplot(filtered, aes(category, solvage_rate, fill = category)) +
+  geom_boxplot() +
+  scale_x_discrete(guide = guide_axis(n.dodge=3)) +
+  labs(title = "Solvage Rate", x = "Rate in Percent")
+```
+
+```{r}
+ggplot(filtered, aes(solved_cases/detected_cases, suspects, color = category)) +
+  geom_point() +
+  geom_smooth(method = "lm", fullrange = T, show.legend = F)
+```
+
+
+Lets also get the number to these graphs.
+
+```{r}
+descr(filter(filtered, category == c2)$solvage_rate)
+c2
+descr(filter(filtered, category == c3)$solvage_rate)
+c3
+descr(filter(filtered, category == c4)$solvage_rate)
+c4
+descr(filter(filtered, category == c5)$solvage_rate)
+c5
+descr(filter(filtered, category == c6)$solvage_rate)
+c6
+descr(filter(filtered, category == c7)$solvage_rate)
+c7
+descr(filter(filtered, category == c8)$solvage_rate)
+c8
+descr(filter(filtered, category == c9)$solvage_rate)
+c9
+descr(filter(filtered, category == c4 | category == c5)$solvage_rate)
+"Crimes associated with theft"
+descr(filtered$solvage_rate)
+"General"
+```
+
+As can be seen in these plots, there is a high variation in the solvage rate of cases based on their category. In general the solvage rate is very high,
+the general median lies at 72% solvage. There are just two exceptions, which are those crimes associated with theft, these lie around 36% solvage rate.
+There is also one more crime category that stands out, every crime associated with murder, this has an extremely low inner quartile range which means, 
+that the solvage rate there is very consistent. <br/>
+When looking back at the plot, there are together with the murder category two more categories, that have a high mean solvage rate and a low inner
+quartile range. These categories are special cases in the data set, you can assume that there is a specific reason behind the relatively consistent and
+high solvage rate, this could be for example, that those cases are treated with a higher importance than others or, that those cases are easier to solve
+or a completely different reason. <br/> 
+<br/>
+Now that we analyzed the solvage rate for the different crime categories for whole Germany, we can take a quick look at the rates for the different 
+provinces. To keep this part short, we just used the overall mean solvage rate for every province instead of separating it into to different categories.
+
+```{r Solvage Rate}
+province_filtered <- provinceCaptureSet %>%
+  filter(detected_cases >= solved_cases & detected_cases > 0) %>%
+  mutate(solvage_rate = solved_cases / detected_cases * 100) %>%
+  select(province_id, solvage_rate)
+
+province_filtered <- aggregate(province_filtered, list(province_filtered$province_id),FUN=mean) %>% 
+  select(!province_id) %>% 
+  rename(province_id = "Group.1")
+
+province_filtered %>% merge(province_ids, "province_id") %>% arrange(province_id)
+
+map_data = empty_map %>% left_join(., province_filtered, by = "province_id")
+
+ggplot(map_data, aes(long, lat, group = group, fill = solvage_rate)) +
+  geom_polygon(color = "black") +
+  geom_polygon(data = filter(map_data, province_id == 3), color = "black") +
+  geom_polygon(data = filter(map_data, province_id == 5), color = "black") +
+  theme_void() +
+  coord_map() + 
+  labs(title = "Province Mean Solvage Rate", fill = "Rate in percent")
+```
+
+When looking on this map, it is clearly visible, that there are
+
+```{r}
+province_filtered <- provinceCaptureSet %>%
+  filter(detected_cases >= solved_cases & detected_cases > 0) %>%
+  mutate(crime_rate = detected_cases / inhabitants * 10000) %>%
+  select(province_id, crime_rate)
+
+province_filtered <- aggregate(province_filtered, list(province_filtered$province_id),FUN=mean) %>% 
+  select(!province_id) %>% 
+  rename(province_id = "Group.1")
+
+map_data = empty_map %>% left_join(., province_filtered, by = "province_id")
+
+ggplot(map_data, aes(long, lat, group = group, fill = crime_rate), color = "black") +
+  geom_polygon() +
+  geom_polygon(data = filter(map_data, province_id == 3)) +
+  geom_polygon(data = filter(map_data, province_id == 5)) +
+  theme_void() +
+  coord_map() + 
+  labs(title = "Province Mean Crimes", fill = "Crimes per 10.000 inhabitants")
+```
+
+
+
+
+
+
+```{r}
+f <- provinceCaptureSet %>% 
+  filter(detected_cases > 0 & detected_cases >= solved_cases) %>% 
+  mutate(solvage_rate = solved_cases / detected_cases) %>% 
+  mutate(crime_rate = detected_cases / inhabitants * 10000)
+
+f %>% group_by(province) %>% 
+  summarise(avg = mean(crime_rate)) %>% 
+  arrange(desc(avg))
+```
+
+```{r}
+ggplot(f, aes(province, solvage_rate, fill = province)) +
+  geom_boxplot() +
+  scale_x_discrete(guide = guide_axis(n.dodge=2))
+```
+
+```{r}
+f %>% filter(is.na(category))
+```
+
+
+
+
+
+```{r}
+barplot(sort(filtered$solvage_rate))
+abline(coef = c(0.69952,0), col = "#cc0000")
+abline(coef = c(0.80491,0), col = "#0000cc")
+abline(coef = c(0.47919,0), col = "#00cc00")
+abline(coef = c(0.94299,0), col = "#00cc00")
+hist(filtered$solvage_rate)
+boxplot(filtered$solvage_rate)
+```
+
+
+
+
+
 
 
 ```{r}

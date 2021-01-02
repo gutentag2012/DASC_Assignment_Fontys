@@ -88,18 +88,21 @@ Remove keys that determine sum values:
 TODO: add more documentation, explain sumkeys, explain retrieval process 
 
 ```{r}
-filteredKeys <- c()
-visited <- c()
-for (key1 in singleKeys$key) {
-  visited <- append(visited, key1)
-  for (key2 in singleKeys$key) {
-    if (!key2 %in% visited) {
-      if (regexpr(paste("^", str_remove(key2, "0+$"), sep = ""), key1)[1] == 1) {
-        filteredKeys <- append(filteredKeys, key2)
-      }
-    }
-  }
-}
+#filteredKeys <- c()
+#for (key1 in captureKeys$key) {
+#  if (!key1 %in% filteredKeys) {
+#    for (key2 in captureKeys$key) {
+#      if (!key2 %in% filteredKeys) {
+#        if (key1 != key2) {
+#          if (regexpr(paste("^", str_remove(key2, "0+$"), sep = ""), key1)[1] == 1) {
+#            filteredKeys <- append(filteredKeys, key2)
+#          }
+#        }
+#      }
+#    }
+#  }
+#}
+filteredKeys <- c("133000","141100","231200","305000","310000","315000","325000","326000","335000","340000","345000","350000","390000","435000","436000","620010","655010","670010","670020","670030")
 ```
 
 Manual check for real sum keys
@@ -205,6 +208,11 @@ Merge singleset to ids
 shortenedSingleSet <- merge(shortenedSingleSet,df, by = "province")
 ```
 
+```{r}
+shortenedSingleSet
+```
+
+
 
 
 
@@ -223,7 +231,7 @@ length(spdf)
 
 
 ```{r}
-spdf
+#spdf
 ```
 
 
@@ -237,7 +245,7 @@ spdf_fortified <- tidy(spdf, area = "code")
 
 # Now I can plot this shape easily as described before:
 ```{r}
-
+install.packages("mapproj")
 library(ggplot2)
 
 ggplot() +
@@ -256,7 +264,7 @@ data %>%
 Merge GeoJson with the amount of cases 
 ```{r}
 spdf_fortified = spdf_fortified %>%
-  left_join(. , data, by="id")
+  left_join(.,data, by="id")
 ```
 
 ```{r}
