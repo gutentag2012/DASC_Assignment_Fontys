@@ -374,13 +374,6 @@ ggplot(filtered, aes(category, solvage_rate, fill = category)) +
   labs(title = "Solvage Rate", x = "Rate in Percent")
 ```
 
-```{r}
-ggplot(filtered, aes(solved_cases/detected_cases, suspects, color = category)) +
-  geom_point() +
-  geom_smooth(method = "lm", fullrange = T, show.legend = F)
-```
-
-
 Lets also get the number to these graphs.
 
 ```{r}
@@ -428,8 +421,6 @@ province_filtered <- aggregate(province_filtered, list(province_filtered$provinc
   select(!province_id) %>% 
   rename(province_id = "Group.1")
 
-province_filtered %>% merge(province_ids, "province_id") %>% arrange(province_id)
-
 map_data = empty_map %>% left_join(., province_filtered, by = "province_id")
 
 ggplot(map_data, aes(long, lat, group = group, fill = solvage_rate)) +
@@ -441,101 +432,59 @@ ggplot(map_data, aes(long, lat, group = group, fill = solvage_rate)) +
   labs(title = "Province Mean Solvage Rate", fill = "Rate in percent")
 ```
 
-When looking on this map, it is clearly visible, that there are
+When looking on this map, it is clearly visible, that there are five relatively dark provinces on the map, which means, that they have the lowest solvage
+rate in Germany. The four out of these provinces are the smallest provinces in Germany while the fifth has no connection in size to the others. <br/>
+To now get a better picture on which provinces are the most dangerous, based on their mean solvage rate and their crimes per inhabitant, we create a
+second map that shows the crimes per 10.000 inhabitants.
 
 ```{r}
 province_filtered <- provinceCaptureSet %>%
   filter(detected_cases >= solved_cases & detected_cases > 0) %>%
   mutate(crime_rate = detected_cases / inhabitants * 10000) %>%
-  select(province_id, crime_rate)
+  select(province_id, crime_rate) %>% 
+  mutate(province_id = as.integer(province_id))
 
-province_filtered <- aggregate(province_filtered, list(province_filtered$province_id),FUN=mean) %>% 
+province_filtered <- aggregate(province_filtered, list(province_filtered$province_id),FUN=sum) %>% 
   select(!province_id) %>% 
-  rename(province_id = "Group.1")
+  rename(province_id = "Group.1") %>% 
+  mutate(province_id = as.character(province_id))
 
 map_data = empty_map %>% left_join(., province_filtered, by = "province_id")
 
-ggplot(map_data, aes(long, lat, group = group, fill = crime_rate), color = "black") +
-  geom_polygon() +
-  geom_polygon(data = filter(map_data, province_id == 3)) +
-  geom_polygon(data = filter(map_data, province_id == 5)) +
+ggplot(map_data, aes(long, lat, group = group, fill = crime_rate)) +
+  geom_polygon(color = "black") +
+  geom_polygon(data = filter(map_data, province_id == 3), color = "black") +
+  geom_polygon(data = filter(map_data, province_id == 5), color = "black") +
   theme_void() +
   coord_map() + 
   labs(title = "Province Mean Crimes", fill = "Crimes per 10.000 inhabitants")
 ```
 
+And again, the three lightest spots on the map, therefore the ones with the highest crime rate, are the three smallest provinces in Germany. Also the 
+other two provinces from the last map have a relatively light tint, a bit above the average, which could indicate a possible relationship between
+the crime rate and the solvage rate. <br/>
+It is also interesting to see, that the eastern provinces have a slightly higher crime rate than the rest of Germany, which could have a possible
+explanation in the fact, that Germany was separated by a wall for many years. After the wall was destroyed, the western provinces implemented a new tax
+to support the eastern provinces, because they needed financial help after those years. So a because the eastern provinces are in general more
+poor, it is possible, that there is a higher crime rate because of it.
 
+### Solved Cases vs Suspects
 
+Now that we analyzed the aspects of the solvage rate in Germany, We wanted to have a look at the suspects involved in solving a case. How many suspects
+do you need to close a case? Are more suspects better for solving the case? <br/>
+One note upfront for this, if a group of people is committing a crime together, every one of them will get their own law suite, which means that every 
+crime listed in our data set has only one person that executed it. Also a person will only be listed once per crime, so if person x committed fraud twice
+and theft once, then he will appear both in the fraud and theft section only once as a suspect. This means, that a crime with 100% solvage rate and
+a lower amount of suspects than detected cases is only explainable by repead offenders. <br/>
+For sum keys about the suspects the same rules apply, so a suspect that commits multiple crimes for the same sum key will only be counted once, so 
+summing up all capture keys contained in a sum key will often lead to a higher number of suspects than what is written in the sum key.
 
-
-
-```{r}
-f <- provinceCaptureSet %>% 
-  filter(detected_cases > 0 & detected_cases >= solved_cases) %>% 
-  mutate(solvage_rate = solved_cases / detected_cases) %>% 
-  mutate(crime_rate = detected_cases / inhabitants * 10000)
-
-f %>% group_by(province) %>% 
-  summarise(avg = mean(crime_rate)) %>% 
-  arrange(desc(avg))
-```
-
-```{r}
-ggplot(f, aes(province, solvage_rate, fill = province)) +
-  geom_boxplot() +
-  scale_x_discrete(guide = guide_axis(n.dodge=2))
-```
-
-```{r}
-f %>% filter(is.na(category))
-```
-
-
-
-
-
-```{r}
-barplot(sort(filtered$solvage_rate))
-abline(coef = c(0.69952,0), col = "#cc0000")
-abline(coef = c(0.80491,0), col = "#0000cc")
-abline(coef = c(0.47919,0), col = "#00cc00")
-abline(coef = c(0.94299,0), col = "#00cc00")
-hist(filtered$solvage_rate)
-boxplot(filtered$solvage_rate)
-```
-
-
-
-
-
-
-
-```{r}
-cor(germanCaptureSet$detected_cases,germanCaptureSet$solved_cases)
-```
-
-```{r}
-plot(filtered$solved_cases, filtered$suspects, 
-     col = "#cc0000",
-     pch = 19)
-abline(lm(filtered$suspects~filtered$solved_cases))
-```
-
-
-```{r}
-plot(filtered$detected_cases, filtered$solved_cases/filtered$detected_cases, 
-     col = "#cc0000",
-     pch = 19,
-     main = "Solvage Rate vs. Detected Cases", 
-     ylab = "Solvage Rate (in percent)",
-     xlab = "Detected Cases")
-```
 
 Note: Points underneath the line are suspected many times
 Note: One case -> one person that did it (every one in the case gets its own law suite)
 ```{r Suspects_Per_Case}
 par(mfrow=c(3,1))
-filtered <- filter(germanNonZeroSet, detected_cases >= solved_cases)
+filtered <- filter(germanCaptureSet, detected_cases >= solved_cases)
 plot(filtered$detected_cases, filtered$suspects, 
      xlim = c(0,8000),
      ylim = c(0,8000),
