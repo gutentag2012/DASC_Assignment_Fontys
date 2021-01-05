@@ -106,7 +106,7 @@ As a last step of importing, we can merge the inhabitants data frame into the or
 number of inhabitants easily in any calculation from here on.
 
 ```{r Merge_Inhabitants}
-originalSet <- merge(originalSet, germanInhabitants, by = "province") %>% arrange(key)
+originalSet <- merge(originalSet, select(germanInhabitants, "province", "inhabitants"), by = "province") %>% arrange(key)
 head(originalSet)
 ```
 
@@ -404,9 +404,8 @@ the general median lies at 72% solvage. There are just two exceptions, which are
 There is also one more crime category that stands out, every crime associated with murder, this has an extremely low inner quartile range which means, 
 that the solvage rate there is very consistent. <br/>
 When looking back at the plot, there are together with the murder category two more categories, that have a high mean solvage rate and a low inner
-quartile range. These categories are special cases in the data set, you can assume that there is a specific reason behind the relatively consistent and
-high solvage rate, this could be for example, that those cases are treated with a higher importance than others or, that those cases are easier to solve
-or a completely different reason. <br/> 
+quartile range. These categories are special cases in the data set and you could assume that there are specific reasons behind the relatively consistent 
+and high solvage rate. <br/> 
 <br/>
 Now that we analyzed the solvage rate for the different crime categories for whole Germany, we can take a quick look at the rates for the different 
 provinces. To keep this part short, we just used the overall mean solvage rate for every province instead of separating it into to different categories.
@@ -415,11 +414,13 @@ provinces. To keep this part short, we just used the overall mean solvage rate f
 province_filtered <- provinceCaptureSet %>%
   filter(detected_cases >= solved_cases & detected_cases > 0) %>%
   mutate(solvage_rate = solved_cases / detected_cases * 100) %>%
-  select(province_id, solvage_rate)
+  select(province_id, solvage_rate) %>% 
+  mutate(province_id = as.integer(province_id))
 
 province_filtered <- aggregate(province_filtered, list(province_filtered$province_id),FUN=mean) %>% 
   select(!province_id) %>% 
-  rename(province_id = "Group.1")
+  rename(province_id = "Group.1") %>% 
+  mutate(province_id = as.character(province_id))
 
 map_data = empty_map %>% left_join(., province_filtered, by = "province_id")
 
@@ -457,16 +458,12 @@ ggplot(map_data, aes(long, lat, group = group, fill = crime_rate)) +
   geom_polygon(data = filter(map_data, province_id == 5), color = "black") +
   theme_void() +
   coord_map() + 
-  labs(title = "Province Mean Crimes", fill = "Crimes per 10.000 inhabitants")
+  labs(title = "Province Accumulated Crimes", fill = "Crimes per 10.000 inhabitants")
 ```
 
 And again, the three lightest spots on the map, therefore the ones with the highest crime rate, are the three smallest provinces in Germany. Also the 
 other two provinces from the last map have a relatively light tint, a bit above the average, which could indicate a possible relationship between
-the crime rate and the solvage rate. <br/>
-It is also interesting to see, that the eastern provinces have a slightly higher crime rate than the rest of Germany, which could have a possible
-explanation in the fact, that Germany was separated by a wall for many years. After the wall was destroyed, the western provinces implemented a new tax
-to support the eastern provinces, because they needed financial help after those years. So a because the eastern provinces are in general more
-poor, it is possible, that there is a higher crime rate because of it.
+the crime rate and the solvage rate.
 
 ### Solved Cases vs Suspects
 
@@ -482,8 +479,15 @@ summing up all capture keys contained in a sum key will often lead to a higher n
 
 Note: Points underneath the line are suspected many times
 Note: One case -> one person that did it (every one in the case gets its own law suite)
+
+```{r}
+(temp <- germanCaptureSet %>% filter(solved_cases/detected_cases==1, suspects < solved_cases) %>% 
+   select(key, category, detected_cases, solved_cases, suspects))
+crimeOverview %>% filter(key %in% temp$key)
+```
+
 ```{r Suspects_Per_Case}
-par(mfrow=c(3,1))
+par(mfrow=c(2,1))
 filtered <- filter(germanCaptureSet, detected_cases >= solved_cases)
 plot(filtered$detected_cases, filtered$suspects, 
      xlim = c(0,8000),
@@ -504,17 +508,151 @@ plot(filtered$solved_cases, filtered$suspects,
      xlab = "Solved Cases",
      ylab = "Suspects")
 abline(coef = c(0,1))
-plot(filtered$solved_cases, filtered$suspects, 
-     xlim = c(0,8000),
-     ylim = c(0,8000),
-     col = "#cc0000",
-     pch = 19,
-     main = "Suspects per Solved Case",
-     xlab = "Solved Cases",
-     ylab = "Suspects")
-abline(coef = c(0,1))
 par(mfrow=c(1,1))
 ```
+
+### Suspects and how they are structured
+
+Now that we analyzed how suspects affect the outcome of an investigation, lets look into what the value behind the suspects is made of. There are three
+variables that describe the suspects more detailed: Male, female and non German suspects. Male and female suspects together add up to the total number 
+of suspects, while the non German suspects are just a part of it. <br/>
+Lets start with looking at the female and male distribution on crimes.
+
+```{r}
+ggplot(germanCaptureSet) +
+  geom_point(aes(suspects, male), color = "blue") +
+  geom_point(aes(suspects, female), color = "red") +
+  geom_abline() +
+  labs(title = "Male and Female Suspect Rate", x = "Number of all Suspects", y = "Male(blue) / Female(red)")
+```
+
+The graph above shows the number of blue dots as the amount of male suspects, while the red dots represent the amount of female. The black line 
+shows the point where there would be a 100% majority of sex from the suspects. <br/>
+The plot shows very clear, that the majority of suspects are male. To further analyze this aspect we introduced the "male coefficient" that show
+the percentage of males for the crime, the females would then be whats missing to the 100%.
+
+```{r}
+maleCoef <- germanCaptureSet %>% filter(suspects > 0) %>% mutate(male_coef = male/suspects)
+
+hist(maleCoef$male_coef, 
+     breaks = 20,
+     freq = F,
+     col = "#cc0000",
+     main = "Male coefficient in all suspects",
+     xlab = "Male percentage")
+
+curve(dnorm(x, mean = mean(maleCoef$male_coef), sd = sd(maleCoef$male_coef)),
+      col = "grey",
+      lwd = 2,
+      add = T)
+
+lines(density(maleCoef$male_coef, adjust = 1), col = "blue", lwd = 2)
+lines(density(maleCoef$male_coef, adjust = 3), col = "lightblue", lwd = 2)
+rug(maleCoef$male_coef, lwd = 2, col = "lightblue")
+```
+
+This histogram shows the distribution of the male coefficient in the data frame, it is overlayed with a normal distribution (gray line) and a line
+representing the density of the data (blue = raw, light blue = smoothed). All the curves follow the chart pretty close and display a clear cluster
+around the mean value.
+
+```{r}
+descr(maleCoef$male_coef)
+```
+
+The average change of a man being suspected for a crime is 83 percent. Because the mean and the median are very close, the value given is an accurate
+view of the reality. This data however does not show how many crimes are done my men, since they could also be wrongly accused. <br/>
+To find the male coefficient for crimes that where really done by men, we have to look at the values that have the same amount of suspects as the
+amount of solved cases, because this means that every case got a single suspect and therefore no wrong accusations.
+
+```{r}
+par(mfrow=c(1,2))
+maleCoefFiltered <- maleCoef %>% filter(solved_cases==suspects)
+
+boxplot(maleCoef$male_coef,
+        col = "#cc0000",
+        main = "All suspected",
+        ylab = "Male percentage",
+        xlab = paste(nrow(maleCoef)," rows"))
+boxplot(maleCoefFiltered$male_coef,
+        col = "#cc0000",
+        main = "Rightful suspected",
+        ylab = "Male percentage",
+        xlab = paste(nrow(maleCoefFiltered)," rows"))
+par(mfrow=c(1,1))
+```
+
+Comparing the two different graphs, they have many points in common and are not that different from one another. Both show a high rate of crimes
+with more male suspects and only outliers for crimes with a high female suspection rate. The inner quartile range of both plots is almost the
+same height, the lower whisker is only a bit smaller than the one on the right side. <br/>
+Effectively the right plot displays with w much fewer observations a close picture to the left one. So what is displayed on the left is not far off
+by suspecting the correct gender for a crime. <br/>
+<br/>
+Lastly lets look at the male coefficient distributed over the different provinces of Germany.
+
+```{r}
+province_filtered <- provinceCaptureSet %>%
+  filter(suspects > 0) %>%
+  mutate(male_coef = male / suspects / 699) %>%
+  select(province_id, male_coef) %>% 
+  mutate(province_id = as.integer(province_id))
+
+province_filtered <- aggregate(province_filtered, list(province_filtered$province_id),FUN=sum) %>% 
+  select(!province_id) %>% 
+  rename(province_id = "Group.1") %>% 
+  mutate(province_id = as.character(province_id))
+
+map_data = empty_map %>% left_join(., province_filtered, by = "province_id")
+
+ggplot(map_data, aes(long, lat, group = group, fill = male_coef)) +
+  geom_polygon(color = "black") +
+  geom_polygon(data = filter(map_data, province_id == 3), color = "black") +
+  geom_polygon(data = filter(map_data, province_id == 5), color = "black") +
+  theme_void() +
+  coord_map() + 
+  labs(title = "Province Accumulated Percentage of Male Accusations", fill = "Male percentage")
+```
+
+Now lets also take a look at the percentage of non German suspects and how they are distributed across the provinces. 
+
+```{r}
+province_filtered <- provinceCaptureSet %>%
+  filter(suspects > 0) %>%
+  mutate(male_coef = non_german / suspects / 699) %>%
+  select(province_id, male_coef) %>% 
+  mutate(province_id = as.integer(province_id))
+
+province_filtered <- aggregate(province_filtered, list(province_filtered$province_id),FUN=sum) %>% 
+  select(!province_id) %>% 
+  rename(province_id = "Group.1") %>% 
+  mutate(province_id = as.character(province_id))
+
+map_data = empty_map %>% left_join(., province_filtered, by = "province_id")
+
+ggplot(map_data, aes(long, lat, group = group, fill = male_coef)) +
+  geom_polygon(color = "black") +
+  geom_polygon(data = filter(map_data, province_id == 3), color = "black") +
+  geom_polygon(data = filter(map_data, province_id == 5), color = "black") +
+  theme_void() +
+  coord_map() + 
+  labs(title = "Province Accumulated Percentage of Non German Accusations", fill = "Non German percentage")
+```
+
+Both maps show a lower percentage in the eastern states of Germany and mark the same states with a higher percentage of suspects. Comparing the two
+maps, it is clear that there is a high change, that a non German suspect is also male.
+
+
+
+### Population
+
+split number of population in one column and add one more with distribution type(Factor)
+
+
+
+
+
+
+
+
 
 ```{r}
 par(mfrow=c(3,2))
@@ -576,7 +714,7 @@ par(mfrow=c(1,1))
 
 ```{r}
 par(mfrow=c(3,2))
-plot(germanNonZeroSet$suspects, germanNonZeroSet$male,
+plot(germanCaptureSet$suspects, germanCaptureSet$male,
      xlim=c(0,8000),
      ylim=c(0,8000),
      col="#cc0000",
@@ -585,7 +723,7 @@ plot(germanNonZeroSet$suspects, germanNonZeroSet$male,
      xlab = "Suspects",
      ylab = "Male Suspects")
 abline(coef = c(0,1))
-plot(germanNonZeroSet$solved_cases, germanNonZeroSet$male,
+plot(germanCaptureSet$solved_cases, germanCaptureSet$male,
      xlim=c(0,8000),
      ylim=c(0,8000),
      col="#cc0000",
@@ -594,7 +732,7 @@ plot(germanNonZeroSet$solved_cases, germanNonZeroSet$male,
      xlab = "Suspects",
      ylab = "Male Suspects")
 abline(coef = c(0,1))
-plot(germanNonZeroSet$suspects, germanNonZeroSet$female,
+plot(germanCaptureSet$suspects, germanCaptureSet$female,
      xlim=c(0,8000),
      ylim=c(0,8000),
      col="#cc0000",
@@ -603,7 +741,7 @@ plot(germanNonZeroSet$suspects, germanNonZeroSet$female,
      xlab = "Suspects",
      ylab = "Female Suspects")
 abline(coef = c(0,1))
-plot(germanNonZeroSet$suspects, germanNonZeroSet$non_german,
+plot(germanCaptureSet$suspects, germanCaptureSet$non_german,
      xlim=c(0,8000),
      ylim=c(0,8000),
      col="#cc0000",
@@ -612,7 +750,7 @@ plot(germanNonZeroSet$suspects, germanNonZeroSet$non_german,
      xlab = "Suspects",
      ylab = "Non German Suspects")
 abline(coef = c(0,1))
-plot(germanNonZeroSet$male, germanNonZeroSet$non_german,
+plot(germanCaptureSet$male, germanCaptureSet$non_german,
      xlim=c(0,8000),
      ylim=c(0,8000),
      col="#cc0000",
@@ -621,7 +759,7 @@ plot(germanNonZeroSet$male, germanNonZeroSet$non_german,
      xlab = "Suspects",
      ylab = "Male Suspects")
 abline(coef = c(0,1))
-plot(germanNonZeroSet$suspects, germanNonZeroSet$male,
+plot(germanCaptureSet$suspects, germanCaptureSet$male,
      xlim=c(0,8000),
      ylim=c(0,8000),
      col="#cc0000",
@@ -634,9 +772,9 @@ par(mfrow=c(1,1))
 ```
 
 ```{r}
-reg <- lm(germanNonZeroSet$male~germanNonZeroSet$suspects)
+reg <- lm(germanCaptureSet$male~germanCaptureSet$suspects)
 summary(reg)
-cor(germanNonZeroSet$suspects, germanNonZeroSet$male)
+cor(germanCaptureSet$suspects, germanCaptureSet$male)
 ```
 
 
