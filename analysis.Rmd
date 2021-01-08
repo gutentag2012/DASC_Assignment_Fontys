@@ -679,7 +679,7 @@ Lets start with looking at the female and male distribution on crimes.
 ggplot(germanCaptureSet) +
   geom_point(aes(suspects, male), color = "blue") +
   geom_point(aes(suspects, female), color = "red") +
-  geom_abline() +
+  geom_abline() + 
   labs(title = "Male and Female Suspect Rate", x = "Number of all Suspects", y = "Male(blue) / Female(red)")
 ```
 
@@ -715,6 +715,15 @@ around the mean value.
 ```{r}
 descr(maleCoef$male_coef)
 ```
+
+```{r}
+reg <- lm(maleCoef$male~maleCoef$suspects)
+
+summary(reg)
+
+plot(reg)
+```
+
 
 The average change of a man being suspected for a crime is 83 percent. Because the mean and the median are very close, the value given is an accurate
 view of the reality. This data however does not show how many crimes are done my men, since they could also be wrongly accused. <br/>
@@ -797,64 +806,182 @@ ggplot(map_data, aes(long, lat, group = group, fill = male_coef)) +
 Both maps show a lower percentage in the eastern states of Germany and mark the same provinces with a higher percentage of suspects. Comparing the two
 maps, it is clear that there is a high change, that a non German suspect is also male.
 
+### Distribution
 
+We now know how the amount of suspects is connected to a solved case and how the suspects are split up into male and female. Now in this last analysis 
+chapter we take a look on the distribution of crimes. We try to find a correlation between the distribution of crimes and their solvage. <br/>
+The problem in our data set is, that we do not know the amount of solved cases per distribution, we only know the amount of detected cases, for the
+further analysis we just look at the relative solvage rate based on the number of detected cases in the distribution. <br/>
+To start of with this chapter we have to modify our data frames, so that the columns for the different distributions are getting reduced into two
+columns, one for the distribution name as a factor and one for the corresponding value.
 
-### Population
-
-split number of population in one column and add one more with distribution type(Factor)
-
-```{r}
+```{r Melting}
 #install.packages("reshape")
 library(reshape)
-meltedGerman <- melt(filter(germanCaptureSet, detected_cases > 0), id = c("key", "category", "province", "inhabitants", "detected_cases", "solved_cases", "not_executed_cases", "suspects", "male", "female", "non_german", "gun_threatened", "gun_shot", "province_id"))
-detach("package:reshape", unload=TRUE)
+
+meltedGerman <- melt(filter(germanCaptureSet, detected_cases > 0), id = c("key", "category", "province", "inhabitants", "detected_cases", "solved_cases", "not_executed_cases", "suspects", "male", "female", "non_german", "gun_threatened", "gun_shot", "province_id", "solvage_rate"))
 meltedGerman$value <- as.integer(meltedGerman$value)
-meltedGerman %>% arrange(key)
-```
-
-
-Shorten set and do stats for different distributions 
-
-```{r}
 meltedGerman <- meltedGerman %>%  mutate(rel_solvage = value/detected_cases * solved_cases/detected_cases, relevance = value/detected_cases) %>% 
   mutate(shift = relevance - rel_solvage)
 
-ggplot(filter(meltedGerman, value > 0)) +
-  geom_boxplot(aes(relevance, variable)) +
-  geom_boxplot(aes(rel_solvage, variable), color = "red", fill = "transparent")
+meltedProvince <- melt(filter(provinceCaptureSet, detected_cases > 0), id = c("key", "category", "province", "inhabitants", "detected_cases", "solved_cases", "not_executed_cases", "suspects", "male", "female", "non_german", "gun_threatened", "gun_shot", "province_id"))
+meltedProvince$value <- as.integer(meltedProvince$value)
+meltedProvince <- meltedProvince %>%  mutate(rel_solvage = value/detected_cases * solved_cases/detected_cases, relevance = value/detected_cases) %>% 
+  mutate(shift = relevance - rel_solvage)
 
-ggplot(filter(meltedGerman, value > 0)) +
-  geom_boxplot(aes(shift, variable))
-
-ggplot(filter(meltedGerman, value > 0), aes(relevance, rel_solvage, color = variable)) +
-  geom_point() +
-  facet_wrap(~variable)
+detach("package:reshape", unload=TRUE)
+meltedGerman <- meltedGerman %>% rename(distribution = "variable", distribution_value = "value")
+meltedProvince <- meltedProvince %>% rename(distribution = "variable", distribution_value = "value")
 ```
 
-```{r}
-reg <- lm(meltedGerman$rel_solvage~meltedGerman$relevance)
+After melting the data sets, we also introduced new calculated variables. We calculated the relevance of a distribution, which represents the percentage 
+on all detected cases. The relative solvage rate is the solvage rate of the crime multiplied by the distributions relevance. The maximum value for the 
+relative solvage rate is the relevance, so we also calculated the difference of to the optimal value as the shift.
 
-cor(meltedGerman$relevance,meltedGerman$rel_solvage)
+```{r Relevance_Solvage}
+#install.packages("gridExtra")
+library(gridExtra)
+grid.arrange(
+  ggplot(filter(meltedGerman, distribution_value > 0)) +
+    geom_boxplot(aes(relevance, distribution)) +
+    geom_boxplot(aes(rel_solvage, distribution), color = "red", fill = "transparent") +
+    labs(
+      title = "Distributions relevance and relative solvage",
+      y = ""
+    ),
+  ggplot(filter(meltedGerman, distribution_value > 0)) +
+    geom_boxplot(aes(shift, distribution)) +
+    labs(
+      title = "Distributions variance from optimal solvage",
+      y = ""
+    ),
+  nrow = 2
+)
+```
+
+On the first glance the first graph looks very busy, but it is important to overlay the different boxplots. The underlying black one displays the
+distributions relevance, while the red overlay represents the relative solvage rate. The first thing to notice in these graphs is, that the
+distribution unknown is an outlier, it has a small relevance but an extremely high relative solvage rate, they almost overlay perfectly. When looking
+at the second plot, this picture solidifies, there we can see the extremely low shift from an optimal solvage rate. <br/>
+Going back to the other values, it is visible, that the relevance is more consistent for distributions from 20K to 100K and from 100K to 500K even though
+the relevance itself varies much between those two. It seems like the most crimes occur in distributions from under 20K to 100K followed by the 
+distribution over 500K. Based on the inner quartile range of the solvage rate it seems, that the consistency for the solvage rate increases for 
+distributions with lower relevance. <br/>
+Looking again at the second graph it is also visible, that the distribution from 100K to 500K has a lower shift than the other three (except for the 
+unknown), all the others are very similar, but this one hits to a higher relative solvage rate. <br/>
+Now, there seems to be a relation between the relevance and solvage rate of a distribution, lets look closer at this.
+
+```{r}
+ggplot(meltedGerman, aes(relevance, rel_solvage, color = category)) +
+  geom_point() +
+  geom_smooth(method="lm") +
+  facet_wrap(~distribution)
+```
+
+Above we plotted the relevance and solvage for each distribution and every category and added a optimal line to every group. Going back the the boxplots
+from before, the distribution unknown should have the lowest overall relevance and a high solvage rate. The facet of the current graph does not show
+that, there is only one category visible with a high solvage rate, while the others are very low. So possibly all the values with a lower relevance are
+clustered at one end where the solvage rate is not visible in this view. <br/>
+On the other hand the distribution 100K to 500K exactly shows what was displayed before, many values are clustered with a low relevance, but the
+solvage rate in many categories is very high. The only categories with a lower solvage rate are related to theft, like described in the chapters above.
+But while the solvage rate of crimes related to theft is low, they always have a relevance of under 50%. <br/>
+Whats also interesting to see is, that crimes related to property and counterfeiting have relevance of under 50% and a high solvage rate for most 
+distributions, except for the distribution over 500K and also the outlier unknown. <br/>
+In general there seems to be positive relation between the relevance and relative solvage rate, the standard error of the optimal line in the plots
+are in most cases low, except for some outliers.
+
+```{r}
+#install.packages("car")
+library(car)
+reg <- lm(rel_solvage~relevance+category, data = meltedGerman)
+reg2 <- lm(rel_solvage~relevance, data = meltedGerman)
+
+vif(reg)
 
 summary(reg)
+summary(reg2)
+
+anova(reg2, reg)
 
 plot(reg)
 ```
+
+
+Now lets also look at how the distributions are present in the different provinces.
+
 ```{r}
-plot(meltedGerman$relevance, meltedGerman$rel_solvage)
-abline(reg, col = "#cc0000")
+province_filtered <- meltedProvince %>%
+  filter(relevance > 0, rel_solvage <= 1)
+
+ggplot(province_filtered, aes(relevance))  +
+  geom_line(
+    aes(y = ..density..),
+    lwd = 1,
+    stat = 'density',
+    adjust = 3,
+    col = "red"
+  ) +
+  stat_function(
+    fun = dnorm,
+    args = list(
+      mean = mean(province_filtered$relevance),
+      sd = sd(province_filtered$relevance)
+    ),
+    lwd = 1,
+    col = "blue"
+  ) +
+  geom_histogram(aes(y = ..density.., fill = distribution), alpha = 0.4) +
+  facet_wrap( ~ province)
 ```
+
+These plots show in a way the amount of larger and smaller cities of the different provinces. It is visible, that distributions over 500K are not present
+in every province and wherever they are they seem to have an impact on the relevance density. Every plot has the same blue line which represents
+the normal distribution of the complete data frame, while the red line shows the density curve of all distributions for the specific province. <br/>
+All provinces without any distribution over 500K has a red line that closely follows the blue line, while the other provinces are shifted. All other
+provinces except for the Berlin, Bremen and Hamburg are shifted to the left meaning, that they have more distributions with a lower relevance. This 
+however makes sense since those provinces where there are more types of distributions, have to split all their detected cases with more distributions. <br/>
+Some provinces have an equal spread of relevance for the different distributions, but for example Schleswig-Holstein, Bayern, Brandenburg and 
+Rhainland-Pfalz have a higher relevance for all their distributions under 20K, even though from the height of the bars it does not seem like they have an 
+extremely high amount of these distributions. <br/>
+Its also interesting to see, that the distribution unknown category has a mostly equal spread over all the provinces, while Berlin does not have any
+unknown distributions. To be clear, Berlin, Hamburg and Bremen are special cases since they are provinces and cities in one, but for some reason
+Berlin stands out of even these three.
+
 ```{r}
-hist(reg$residuals)
+ggplot(province_filtered, aes(rel_solvage))  +
+  geom_line(
+    aes(y = ..density..),
+    lwd = 1,
+    stat = 'density',
+    adjust = 3,
+    col = "red"
+  ) +
+  stat_function(
+    fun = dnorm,
+    args = list(
+      mean = mean(province_filtered$rel_solvage),
+      sd = sd(province_filtered$rel_solvage)
+    ),
+    lwd = 1,
+    col = "blue"
+  ) +
+  geom_histogram(aes(y = ..density.., fill = distribution), alpha = 0.4) +
+  facet_wrap( ~ province)
 ```
 
+We also created the same plots with the relative solvage rate instead of the relevance, with the same blue and red curve on top. The same observation
+where the red line follows the blue for all provinces without distributions of over 500K can be made here. <br/>
+This time the plots look more ordered after color and height, meaning that every plot starts with a high density of low solvage rates that slowly decreases
+while the solvage rate increases. In general the density for the unknown distributions decreases, then it seems like the higher distributions start
+decreasing their density first. At the end of every plot there is a small bump of cases with a 100% relative solvage rate. <br/>
+Except for the before named three city-provinces, there are two exceptions to the observations from above, first in Sachsen the solvage rate for
+the distributions over 500K has a sudden bump around the mean of the normal distribution and second in Nordrhein-Westfalen the distributions under
+20K fall of very quickly, together with the distribution unknown.
 
-
-
-
-
-## Model 
-
-
-
+```{r Distribution_Crimes}
+ggplot(meltedGerman, aes(detected_cases, distribution_value, color = category)) +
+  geom_point() +
+  geom_smooth(method="lm", fullrange = T) +
+  facet_wrap(~distribution)
+```
 
