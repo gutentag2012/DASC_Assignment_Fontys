@@ -403,6 +403,7 @@ different solvage rates.
 
 ```{r Adding_Solvage_Rate, inclue=FALSE}
 germanCaptureSet <- germanCaptureSet %>% mutate(solvage_rate = solved_cases/detected_cases)
+provinceCaptureSet <- provinceCaptureSet %>% mutate(solvage_rate = solved_cases/detected_cases)
 ```
 
 ```{r Calc_Solvage_Rate, fig.height=8, fig.width=15}
@@ -544,14 +545,10 @@ After looking at the outliers, we can try to create a linear model, since the fi
 of the variables. We start by looking at the mathematical correlation of the variables.
 
 ```{r Correlation_Check}
-germanCasesSet <- germanCaptureSet %>% filter(detected_cases > 0, solved_cases > 0)
-
-germanCasesSetQuartile <- quantile(germanCasesSet$suspects/germanCasesSet$solved_cases, 0.75)
-germanCasesSetQuartile2 <- quantile(germanCasesSet$suspects/germanCasesSet$solved_cases, 0.75)
-IQR <- IQR(germanCasesSet$suspects/germanCasesSet$solved_cases)
-
-germanCasesSet <- germanCasesSet %>% filter(suspects/solved_cases <= germanCasesSetQuartile + 1.5*IQR)
-germanCasesSet <- germanCasesSet %>% filter(suspects/solved_cases > germanCasesSetQuartile2 - 1.5*IQR)
+summary(germanCaptureSet$solved_cases)
+nrow(germanCaptureSet %>% filter(solved_cases > 10000))
+germanCasesSet <- germanCaptureSet %>% filter(detected_cases > 0, solved_cases > 0, solved_cases <= 10000)
+summary(germanCasesSet$solved_cases)
 
 cor(germanCasesSet$solved_cases, germanCasesSet$suspects)
 ```
@@ -660,10 +657,10 @@ ggplot(germanCaptureSet) +
 
 The graph above shows the blue dots as the male suspects, while the red dots represent the female. The black line 
 shows the point where there would be a 100% majority of one sex of the suspects. <br/>
-The plot shows very clear, that the majority of suspects are male. To further analyze this aspect we introduced the "male coefficient" that show
-the percentage of males for the crime, the females would then be whats missing to the 100%.
+The plot shows very clearly, that the majority of suspects are male. To further analyze this aspect we introduce the "male coefficient" that show
+the percentage of male suspects, the females would then be whats missing to the 100%.
 
-```{r}
+```{r Male_Coef, fig.height=8, fig.width=15}
 maleCoef <- germanCaptureSet %>% filter(suspects > 0) %>% mutate(male_coef = male/suspects)
 
 hist(maleCoef$male_coef, 
@@ -684,40 +681,20 @@ rug(maleCoef$male_coef, lwd = 1, col = "lightblue")
 ```
 
 This histogram shows the distribution of the male coefficient in the data frame, it is overlayed with a normal distribution (gray line) and a line
-representing the density of the data (blue = raw, light blue = smoothed). All the curves follow the chart pretty close and display a clear cluster
-around the mean value.
+representing the density of the data (dark blue = raw, light blue = smoothed). All the curves follow the chart pretty close and display a clear cluster
+around the mean value. <br/>
+This plot supports the view of the first chart, that there are a lot more male suspects than female, most cases have around 83% male suspects.
 
-```{r}
+```{r Described_Male_Coef}
 descr(maleCoef$male_coef)
 ```
 
-```{r fig.height=8, fig.width=15}
-
-q3 <- quantile(maleCoef$male_coef, 0.75)
-q1 <- quantile(maleCoef$male_coef, 0.75)
-IQR <- IQR(maleCoef$male_coef)
-
-maleCoef <- maleCoef %>% filter(male_coef <= q3 + 1.5*IQR)
-maleCoef <- maleCoef %>% filter(male_coef > q1 - 1.5*IQR)
-
-reg <- lm(maleCoef$male~maleCoef$suspects)
-
-plot(maleCoef$male, reg$residuals)
-
-summary(reg)
-
-par(mfrow=c(2,2))
-plot(reg)
-par(mfrow=c(1,1))
-```
-
-
-The average change of a man being suspected for a crime is 83 percent. Because the mean and the median are very close, the value given is an accurate
-view of the reality. This data however does not show how many crimes are done my men, since they could also be wrongly accused. <br/>
-To find the male coefficient for crimes that where really done by men, we have to look at the values that have the same amount of suspects as the
+Because the mean and the median are very close, both values give a very accurate view of the reality. This data however does not show how many crimes 
+are committed my men, since they could also be wrongly accused. <br/>
+To find the male coefficient for crimes that where really committed by men, we have to look at the values that have the same amount of suspects as the
 amount of solved cases, because this means that every case got a single suspect and therefore no wrong accusations.
 
-```{r}
+```{r Rightful_Accused, fig.height=8, fig.width=15}
 par(mfrow=c(1,2))
 maleCoefFiltered <- maleCoef %>% filter(solved_cases==suspects)
 
@@ -736,13 +713,13 @@ par(mfrow=c(1,1))
 
 Comparing the two different graphs, they have many points in common and are not that different from one another. Both show a high rate of crimes
 with more male suspects and only outliers for crimes with a high female suspection rate. The inner quartile range of both plots is almost the
-same height, the lower whisker is only a bit smaller than the one on the right side. <br/>
-Effectively the right plot displays with w much fewer observations a close picture to the left one. So what is displayed on the left is not far off
-by suspecting the correct gender for a crime. <br/>
+same height and the lower whisker is only a bit smaller on the right plot. <br/>
+Effectively the right plot is similar to the left one, but shifted up by a lot, the number of males where we know for a fact that they committed is
+extremely high. There are also even fewer outliers and only one or two cases where there are more women suspected that men.
 <br/>
 Lastly lets look at the male coefficient distributed over the different provinces of Germany.
 
-```{r}
+```{r Map_Male_Coef, fig.height=8, fig.width=12}
 province_filtered <- provinceCaptureSet %>%
   filter(suspects > 0) %>%
   mutate(fill = male / suspects / 699)
@@ -750,9 +727,9 @@ province_filtered <- provinceCaptureSet %>%
 displayMap(province_filtered, sum, "Province Accumulated Percentage of Male Accusations", "Male percentage")
 ```
 
-Now lets also take a look at the percentage of non German suspects and how they are distributed across the provinces. 
+To bring back the amount of non German suspects, lets also create a map for those.
 
-```{r}
+```{r Map_Non_German, fig.height=8, fig.width=12}
 province_filtered <- provinceCaptureSet %>%
   filter(suspects > 0) %>%
   mutate(fill = non_german / suspects / 699)
@@ -760,8 +737,13 @@ province_filtered <- provinceCaptureSet %>%
 displayMap(province_filtered, sum, "Province Accumulated Percentage of Non German Accusations", "Non German percentage")
 ```
 
-Both maps show a lower percentage in the eastern states of Germany and mark the same provinces with a higher percentage of suspects. Comparing the two
-maps, it is clear that there is a high change, that a non German suspect is also male.
+Both maps show a lower percentage in the eastern states of Germany and mark the same provinces with a higher percentage of suspects. The map for the
+non German suspects shows a large gap between those provinces with a higher non German suspect rate and those with a lower one, it is almost halved
+for a lot of provinces. Interestingly enough all eastern provinces have a low amount of non German suspects, except for Berlin which has one of the 
+highest percentages. <br/>
+Comparing the two maps, it is clear that those states with a higher amount of male suspects also have a high amount of non German suspects, so there
+is a high chance that a non German suspect is also going to be male. However those variables can not clearly be compared in this data set, so it is
+very well possible that all non German suspects are female, but the chance for that is relatively low.
 
 ### Distribution
 
@@ -772,92 +754,201 @@ further analysis we just look at the relative solvage rate based on the number o
 To start of with this chapter we have to modify our data frames, so that the columns for the different distributions are getting reduced into two
 columns, one for the distribution name as a factor and one for the corresponding value.
 
-```{r Melting}
+```{r Melting, message=FALSE}
 #install.packages("reshape")
 library(reshape)
 
-meltedGerman <- melt(filter(germanCaptureSet, detected_cases > 0), id = c("key", "category", "province", "inhabitants", "detected_cases", "solved_cases", "not_executed_cases", "suspects", "male", "female", "non_german", "gun_threatened", "gun_shot", "province_id", "solvage_rate"))
+ids <- c(
+  "key",
+  "crime",
+  "category",
+  "province",
+  "inhabitants",
+  "detected_cases",
+  "solved_cases",
+  "not_executed_cases",
+  "suspects",
+  "male",
+  "female",
+  "non_german",
+  "gun_threatened",
+  "gun_shot",
+  "province_id",
+  "solvage_rate"
+)
+
+meltedGerman <- melt(filter(germanCaptureSet, detected_cases > 0, solved_cases > 0), id = ids)
 meltedGerman$value <- as.integer(meltedGerman$value)
-meltedGerman <- meltedGerman %>%  mutate(rel_solvage = value/detected_cases * solved_cases/detected_cases, relevance = value/detected_cases) %>% 
+meltedGerman <- meltedGerman %>% mutate(
+  rel_solvage = value / detected_cases * solved_cases / detected_cases,
+  relevance = value / detected_cases
+) %>%
   mutate(shift = relevance - rel_solvage)
 
-meltedProvince <- melt(filter(provinceCaptureSet, detected_cases > 0), id = c("key", "category", "province", "inhabitants", "detected_cases", "solved_cases", "not_executed_cases", "suspects", "male", "female", "non_german", "gun_threatened", "gun_shot", "province_id"))
+meltedProvince <- melt(filter(provinceCaptureSet, detected_cases > 0, solved_cases > 0), id = ids)
 meltedProvince$value <- as.integer(meltedProvince$value)
-meltedProvince <- meltedProvince %>%  mutate(rel_solvage = value/detected_cases * solved_cases/detected_cases, relevance = value/detected_cases) %>% 
+meltedProvince <- meltedProvince %>% mutate(
+  rel_solvage = value / detected_cases * solved_cases / detected_cases,
+  relevance = value / detected_cases
+) %>%
   mutate(shift = relevance - rel_solvage)
 
-detach("package:reshape", unload=TRUE)
-meltedGerman <- meltedGerman %>% rename(distribution = "variable", distribution_value = "value")
-meltedProvince <- meltedProvince %>% rename(distribution = "variable", distribution_value = "value")
+detach("package:reshape", unload = TRUE)
+
+meltedGerman <-
+  meltedGerman %>% rename(distribution = "variable", distribution_value = "value")
+meltedProvince <-
+  meltedProvince %>% rename(distribution = "variable", distribution_value = "value")
 ```
 
-After melting the data sets, we also introduced new calculated variables. We calculated the relevance of a distribution, which represents the percentage 
-on all detected cases. The relative solvage rate is the solvage rate of the crime multiplied by the distributions relevance. The maximum value for the 
-relative solvage rate is the relevance, so we also calculated the difference of to the optimal value as the shift.
+After melting the data sets, we also introduced new calculated variables. We calculated the relevance of a distribution, which represents the 
+distributions percentage on all detected cases. The relative solvage rate is the solvage rate of the crime multiplied by the distributions 
+relevance. The maximum value for the relative solvage rate therefore is the relevance. That is why we also calculated the difference of to the 
+optimal value as the shift.
 
-```{r Relevance_Solvage}
+```{r Relevance_Solvage, fig.height=8, fig.width=15}
 grid.arrange(
   ggplot(filter(meltedGerman, distribution_value > 0)) +
     geom_boxplot(aes(relevance, distribution)) +
     geom_boxplot(aes(rel_solvage, distribution), color = "red", fill = "transparent") +
     labs(
       title = "Distributions relevance and relative solvage",
-      y = ""
+      y = "",
+      x = "Relevance / Relative Solvage"
     ),
   ggplot(filter(meltedGerman, distribution_value > 0)) +
     geom_boxplot(aes(shift, distribution)) +
     labs(
       title = "Distributions variance from optimal solvage",
-      y = ""
+      y = "",
+      x = "Difference from optimal solvage"
     ),
   nrow = 2
 )
 ```
 
-On the first glance the first graph looks very busy, but it is important to overlay the different boxplots. The underlying black one displays the
-distributions relevance, while the red overlay represents the relative solvage rate. The first thing to notice in these graphs is, that the
-distribution unknown is an outlier, it has a small relevance but an extremely high relative solvage rate, they almost overlay perfectly. When looking
+On the first glance the first plot looks very busy, but it is important to overlay the different boxplots. The underlying black one displays the
+distributions relevance, while the red overlay represents the relative solvage rate. The first thing to notice in these plots is, that the
+distribution unknown is an outlier; it has a small relevance but an extremely high relative solvage rate, they almost overlay perfectly. When looking
 at the second plot, this picture solidifies, there we can see the extremely low shift from an optimal solvage rate. <br/>
 Going back to the other values, it is visible, that the relevance is more consistent for distributions from 20K to 100K and from 100K to 500K even though
 the relevance itself varies much between those two. It seems like the most crimes occur in distributions from under 20K to 100K followed by the 
 distribution over 500K. Based on the inner quartile range of the solvage rate it seems, that the consistency for the solvage rate increases for 
 distributions with lower relevance. <br/>
 Looking again at the second graph it is also visible, that the distribution from 100K to 500K has a lower shift than the other three (except for the 
-unknown), all the others are very similar, but this one hits to a higher relative solvage rate. <br/>
-Now, there seems to be a relation between the relevance and solvage rate of a distribution, lets look closer at this.
+unknown), all the others are very similar, but this one has a higher relative solvage rate. <br/>
+There seems to be a relation between the relevance and solvage rate of a distribution, lets look closer at this.
 
-```{r}
+```{r Solvage_VS_Relevance, fig.height=8, fig.width=15}
 ggplot(meltedGerman, aes(relevance, rel_solvage, color = category)) +
   geom_point() +
   geom_smooth(method="lm") +
+  labs(
+    title = "Solvage vs. Relevance",
+    x = "Relevance",
+    y = "Relative Solvage in percent"
+  ) +
   facet_wrap(~distribution)
 ```
 
 Above we plotted the relevance and solvage for each distribution and every category and added a optimal line to every group. Going back the the boxplots
-from before, the distribution unknown should have the lowest overall relevance and a high solvage rate. The facet of the current graph does not show
+from before, the distribution unknown should have the lowest overall relevance and a high solvage rate. The facet for this distribution does not show
 that, there is only one category visible with a high solvage rate, while the others are very low. So possibly all the values with a lower relevance are
-clustered at one end where the solvage rate is not visible in this view. <br/>
+clustered at the low end where the solvage rate is not visible in this view. <br/>
 On the other hand the distribution 100K to 500K exactly shows what was displayed before, many values are clustered with a low relevance, but the
-solvage rate in many categories is very high. The only categories with a lower solvage rate are related to theft, like described in the chapters above.
+solvage rate in many categories is very high. The only categories with a lower solvage rate are related to theft, like described in the first chapter.
 But while the solvage rate of crimes related to theft is low, they always have a relevance of under 50%. <br/>
-Whats also interesting to see is, that crimes related to property and counterfeiting have relevance of under 50% and a high solvage rate for most 
+Whats also interesting to see is, that crimes related to fraud have a general relevance of under 50% and a high solvage rate for most 
 distributions, except for the distribution over 500K and also the outlier unknown. <br/>
-In general there seems to be positive relation between the relevance and relative solvage rate, the standard error of the optimal line in the plots
-are in most cases low, except for some outliers.
+<br/>
+In general there seems to be positive relation between the relevance and relative solvage rate, that is why we now want to create a multiple regression 
+based on the solvage rate, relevance and the categories, but since the distribution unknown and the distribution over 500K seems to have a different 
+pattern in their correlation we decided to filter them out for the linear model. <br/>
+To also be sure that the multiple regression model with the categories is a more accurate model than the one without we compare both of them first.
 
-```{r}
-c6
-c7
-c8
-c9
-reg <- lm(rel_solvage~relevance+category, data = filter(meltedGerman, distribution != "distribution_unknown", 
-                                                        category == c6 | category == c7 | category == c8 | category == c9))
-summary(reg)
-plot(reg)
+```{r Compare_Regression_Models}
+modelData <- meltedGerman %>% filter(distribution != "distribution_unknown", distribution != "distribution_over_500K")
+
+reg <- lm(rel_solvage~relevance+category, data = modelData)
+reg2 <- lm(rel_solvage~relevance, data = modelData)
+
+anova(reg, reg2)
 ```
 
+When looking at the RSS of both models it, the RSS of the first model, the one with the multiple linear regression, is much lower and therefore more 
+accurate than the other one. The next step is to assure that there is no collinearity between the different variables of the multiple linear regression
+and to look at the summary for the model.
 
-Now lets also look at how the distributions are present in the different provinces.
+```{r Analyse_Regression_Values}
+vif(reg)
+
+summary(reg)
+```
+
+Looking at the values from the vif command, there is a low risk of collinearity in this model, so we can proceed. <br/>
+The summary for the different variables affecting the linear regression shows, that the null hypothesis is not valid for most of the variables, there only
+seems to be an issues with the fraud category. Also looking at the estimate for the theft category shows that their impact is larger than the other
+variables and negative which displays them having a lower curve in the plot before. <br/>
+The standard errors for the variables is quite low and even the residual standard error is not noticeable. All in all the R squared shows, that
+over 79% of  the data variation can be explained by this regression model. <br/>
+To be sure about the validity of the and power of this model, we take a look at the graphs created for the regression model.
+
+```{r Regression_Plots, fig.height=8, fig.width=15}
+par(mfrow=c(2,2))
+plot(reg)
+par(mfrow=c(1,1))
+```
+
+The Residuals vs Fitted plot shows a relative even distribution of values until 0.4, after that it slowly starts drifting. In general the line still 
+is relatively close to the dotted line and there is no visible pattern, so the linearity is still given. <br/>
+The Normal Q-Q plot shows the same smaller issue like the plot before, most of the values follow the line pretty close, even the values in the upper
+quarter only have a small variation, but the lowest quartile shows a drift in residuals. But also this is not enough to show big flaws in the model, 
+some variation will always be there, when using this model however you have to be a bit more careful. <br/>
+The next Scale-Location plot shows a nice even distribution of points along the red line and proofs that we have a homoscedasticity. <br/>
+The last plot only shows that there are no special cases with an extremely high influence on the regression, there are three cases with a higher
+influence, but not significant. <br/>
+Lets now predict a value for every observation in our data set and calculate the accuracy of the prediction. To visualize this in the end we 
+plot the accuracy in a boxplot ofterwards.
+
+```{r Predict_Multiple_Values, fig.height=8, fig.width=15}
+actual <- modelData %>% select(rel_solvage,relevance,category) %>% filter(rel_solvage > 0)
+
+p <-
+  data.frame(
+    relevance = actual$relevance,
+    category = actual$category
+  )
+p <- as.data.frame(p)
+
+
+predicted <- predict(reg, newdata = p)
+p["predicted"] <- predicted
+p["actual"] <- actual$rel_solvage
+
+p <- p %>%  mutate(offset = (actual - predicted) / actual * 100)
+
+ggplot(p, aes(category, offset, color = category)) +
+  geom_boxplot() +
+  scale_x_discrete(guide = guide_axis(n.dodge = 3)) +
+  labs(
+    title = "Accuracy of predictions",
+    x = "",
+    y = "Offset from actual value in percent"
+  )
+```
+
+In general the accuracy of the regression model is extremely high, all of the boxplots are around 0, but since there is a probability party to every
+regression model, there are also a lot of outliers. The highest outliers are part of the theft category which makes sense, since their value also
+differs a lot from the others.
+
+```{r Prediction_Summary}
+summary(p$offset)
+```
+
+The general accuracy of the predictions is around 79%, and therefore the same value as the r squared of the regression model. In general the 
+regression model has a high accuracy and is therefore accepted. <br/>
+<br/>
+Now at the end of this chapter lets also look at how the distributions are present in the different provinces.
 
 ```{r}
 province_filtered <- meltedProvince %>%
@@ -928,12 +1019,12 @@ Except for the before named three city-provinces, there are two exceptions to th
 the distributions over 500K has a sudden bump around the mean of the normal distribution and second in Nordrhein-Westfalen the distributions under
 20K fall of very quickly, together with the distribution unknown.
 
-```{r Distribution_Crimes}
-ggplot(meltedGerman, aes(detected_cases, distribution_value, color = category)) +
-  geom_point() +
-  geom_smooth(method="lm", fullrange = T) +
-  facet_wrap(~distribution)
-```
-
 ### Summary
 
+To summarize this data analysis at the end, we can say that there are definitely major factors that influence the solvage rate of a certain crime. It  is
+very important to not treat every crime the same, the major categories of crimes differ a lot in their solvage. It is very possible, that certain crime
+categories are investigated more intense my the police, as well as some crimes are especially easy or hard to solve. <br/>
+It is also not possible to take all numbers for whole Germany, many provinces differ from one another in many aspects, so a detailed analysis for those
+is necessary. <br/>
+The last point, that this analysis showed, was that suspects play a major roll in solving crimes and that a majority of them are male, but also that
+certain crimes have a tendency towards repead offenders.
