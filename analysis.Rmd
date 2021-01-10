@@ -491,7 +491,7 @@ solvedCasesFiltered <- filter(germanCaptureSet, detected_cases > 0, suspects > 0
 
 ggplot(solvedCasesFiltered, aes(solved_cases, suspects, color = category)) +
   geom_point() +
-  geom_smooth(method = "lm", fullrange = T, show.legend = F) +
+  geom_smooth(method = "lm", fullrange = F, show.legend = F) +
   geom_abline() +
   labs(title = "Suspects vs. Solved", x = "Solved Cases", y ="Suspects")
 ```
@@ -1031,7 +1031,7 @@ the distributions over 500K has a sudden bump around the mean of the normal dist
 
 ### Summary
 
-To summarize this data analysis at the end, we can say that there are definitely major factors that influence the solvage rate of a certain crime. It  is
+To summarize this data analysis at the end, we can say that there are definitely major factors that influence the solvage rate of a certain crime. It is
 very important to not treat every crime the same, the major categories of crimes differ a lot in their solvage. It is very possible, that certain crime
 categories are investigated more intense my the police, as well as some crimes are especially easy or hard to solve. <br/>
 It is also not possible to take all numbers for whole Germany, many provinces differ from one another in many aspects, so a detailed analysis for those
