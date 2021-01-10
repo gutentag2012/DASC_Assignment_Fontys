@@ -222,6 +222,7 @@ c9 <- levels(originalSet$category)[9]
 ### Enter Province ID
 
 To be able to use the provinces later in a map we have to give all the provinces an id.
+Since it is important that each province has the same id as the provinces used in the geojson dataframe, the id has to be the same. Thats why we are adding the id manually and not with a formula. 
 
 ```{r Province_Id}
 province_ids <- data.frame(
@@ -564,7 +565,7 @@ Q1 <- quantile(germanCasesSet$solved_cases, .25)
 Q3  <- quantile(germanCasesSet$solved_cases, .75)
 IQR <- IQR(germanCasesSet$solved_cases)
 
-modelSet <- germanCasesSet %>%subset(solved_cases> (Q1 - 1.5*IQR) & solved_cases< (Q3 + 1.5 * IQR))
+modelSet <- germanCasesSet %>%subset(solved_cases> (Q1 - 1.5 * IQR) & solved_cases< (Q3 + 1.5 * IQR))
 
 reg <- lm(solved_cases ~ suspects,data = modelSet)
 summary(reg)
@@ -589,16 +590,19 @@ To get a better understanding of the variation of residuals we look at a histogr
 ```{r Hist_Residuals, fig.height=8, fig.width=15}
 hist(reg$residuals,
      col = "#cc0000",
-     main = "Resudial spread",
+     main = "Residual spread",
      xlab = "Residuals")
 ```
 
-This plot show, that we have a high number of low negative residuals, that are cancelled out by a lower number of high positive residuals. This is
+This plot show, that we have a high number of low negative residuals, that are canceled out by a lower number of high positive residuals. This is
 not a problem, but has to be mentioned for the further analysis.
 
 ```{r Reg_Plot, fig.height=8, fig.width=15}
 par(mfrow=c(2,2))
 plot(reg)
+```
+
+```{r include=FALSE}
 par(mfrow=c(1,1))
 ```
 
@@ -642,35 +646,23 @@ p <- p %>% mutate(offsetAdjusted = (actual - (predicted - 10)) / actual * 100,
                   offset = (actual - predicted) / actual * 100)
 
 summary(p$offset)
+```
+
+Looking at the summary of the offset we can see, that there is a big difference in the mean and median offset, therefore there are large outliers
+that shift the mean. In general the accuracy of the predictions made is around 86% because of the median of 14% offset from the real value. <br/>
+The model is not that accurate since the mean is way below the median and the outliers are at over 1500% offset. Going back to the summary of the
+regression model, we noticed that the standard error for the intercept is almost as high as the intercept itself and the null hypothesis has a high
+chance of being accepted. That is why we also created a offset value where we subtract the standard value of the intercept from the prediction value
+to reduce the impact the intercept has on the overall model.
+
+```{r Adjusted_Predict}
 summary(p$offsetAdjusted)
 ```
 
-```{r}
-q3 <- quantile(germanCasesSet$solved_cases,.75)
-val <- filter(germanCasesSet, solved_cases <= q3) 
-max <- max(val$solved_cases)
-# get number of solved cases and suspects:
-(actual <-germanCasesSet %>% select(solved_cases,suspects) %>% filter(solved_cases == max))
-```
-These are the values of our set. <br>
-We can try to predict the solved cases when we know x. (The amount of suspects) to compare the calculated value with the actual of 1334 cases by 1562 suspects.:  <br/>
-Y = 1,047679*1562-18,641053   <br/>
-Y = 1.617,833545  <br/>
-
-The model predicts an amount of ~ 1617,83 solved cases when we have 1562 suspects.  <br/>
-The same result is displayed by applying predict():   <br/>
-```{r}
-p <- as.data.frame(1562)
-colnames(p) <- "suspects"
-
-(predicted <- predict(reg, newdata = p))
-```
-The deviation of actual and predicted value is calculated here: 
-```{r}
-# in percentage
-(1 - (max/predicted))*100
-```
-This means, the actual value deviates about 17 percent. This is a high deviation and it confirmed what we expected earlier: Solved cases are also influenced by other factors, but the amount of suspects definetely has a high influence. In conclusion: The model predictions for a high amount of solved cases are not accurate when it comes to solved cases at the end because of outliers. The high deviation in the example we are using here is also explained because of the intercept we had to use in the formula. Since the intercept itself has a high SSE and a high P value, it explains the deviation mentioned above. To check the influence of outliers in the dataframe we can filter by the category with the less amount of outliers which was "Straftaten gegen das Leben" (Crimes against life.)
+Now here we can see, that the mean and median drastically moved towards 0 and the outliers also got reduced by a lot. This model shows a higher 
+accuracy in its predictions than the first one, the mean is at 17% offset from the real value and the center of the data has a prediction 
+accuracy of 96%. That said the model still has some bigger outliers, but in general the adjusted regression model is relatively accurate and is
+therefore accepted.
 
 ### Suspects and how they are structured
 
@@ -740,6 +732,9 @@ boxplot(maleCoefFiltered$male_coef,
         main = "Rightful suspected",
         ylab = "Male percentage",
         xlab = paste(nrow(maleCoefFiltered)," rows"))
+```
+
+```{r include=FALSE}
 par(mfrow=c(1,1))
 ```
 
@@ -928,6 +923,9 @@ To be sure about the validity of the and power of this model, we take a look at 
 ```{r Regression_Plots, fig.height=8, fig.width=15}
 par(mfrow=c(2,2))
 plot(reg)
+```
+
+```{r include=FALSE}
 par(mfrow=c(1,1))
 ```
 
@@ -1019,7 +1017,7 @@ All provinces without any distribution over 500K has a red line that closely fol
 provinces except for the Berlin, Bremen and Hamburg are shifted to the left meaning, that they have more distributions with a lower relevance. This 
 however makes sense since those provinces where there are more types of distributions, have to split all their detected cases with more distributions. <br/>
 Some provinces have an equal spread of relevance for the different distributions, but for example Schleswig-Holstein, Bayern, Brandenburg and 
-Rhainland-Pfalz have a higher relevance for all their distributions under 20K, even though from the height of the bars it does not seem like they have an 
+Rheinland-Pfalz have a higher relevance for all their distributions under 20K, even though from the height of the bars it does not seem like they have an 
 extremely high amount of these distributions. <br/>
 Its also interesting to see, that the distribution unknown category has a mostly equal spread over all the provinces, while Berlin does not have any
 unknown distributions. To be clear, Berlin, Hamburg and Bremen are special cases since they are provinces and cities in one, but for some reason
@@ -1065,7 +1063,7 @@ the distributions over 500K has a sudden bump around the mean of the normal dist
 
 To summarize this data analysis at the end, we can say that there are definitely major factors that influence the solvage rate of a certain crime. It is
 very important to not treat every crime the same, the major categories of crimes differ a lot in their solvage. It is very possible, that certain crime
-categories are investigated more intense my the police, as well as some crimes are especially easy or hard to solve. <br/>
+categories are investigated more intense by the police, as well as some crimes are especially easy or hard to solve. <br/>
 It is also not possible to take all numbers for whole Germany, many provinces differ from one another in many aspects, so a detailed analysis for those
 is necessary. <br/>
 The last point, that this analysis showed, was that suspects play a major roll in solving crimes and that a majority of them are male, but also that
