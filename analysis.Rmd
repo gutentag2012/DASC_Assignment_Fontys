@@ -950,7 +950,7 @@ regression model has a high accuracy and is therefore accepted. <br/>
 <br/>
 Now at the end of this chapter lets also look at how the distributions are present in the different provinces.
 
-```{r}
+```{r Province_Distribution_Relevance, fig.height=8, fig.width=15}
 province_filtered <- meltedProvince %>%
   filter(relevance > 0, rel_solvage <= 1)
 
@@ -972,6 +972,11 @@ ggplot(province_filtered, aes(relevance))  +
     col = "blue"
   ) +
   geom_histogram(aes(y = ..density.., fill = distribution), alpha = 0.4) +
+  labs(
+    title = "Province Distribution Relevance",
+    x = "Relevance",
+    y = "Density"
+  ) +
   facet_wrap( ~ province)
 ```
 
@@ -988,7 +993,7 @@ Its also interesting to see, that the distribution unknown category has a mostly
 unknown distributions. To be clear, Berlin, Hamburg and Bremen are special cases since they are provinces and cities in one, but for some reason
 Berlin stands out of even these three.
 
-```{r}
+```{r Province_Distribution_Solvage, fig.height=8, fig.width=15}
 ggplot(province_filtered, aes(rel_solvage))  +
   geom_line(
     aes(y = ..density..),
@@ -1007,6 +1012,11 @@ ggplot(province_filtered, aes(rel_solvage))  +
     col = "blue"
   ) +
   geom_histogram(aes(y = ..density.., fill = distribution), alpha = 0.4) +
+  labs(
+    title = "Province Distribution Relative Solvage",
+    x = "Relative Solvage",
+    y = "Density"
+  ) +
   facet_wrap( ~ province)
 ```
 
