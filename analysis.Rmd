@@ -63,7 +63,7 @@ sum keys and are used by the police to study different fields of crimes.
 The first step to every data analysis is to import the data into your project. The data we chose is available as an excel file so we use the 
 package "readxl" to import the sets from excel. For the import to work properly we had to remove some unnecessary header lines in the main data
 set, we did that by specifying a "range" in the read_excel command. <br/>
-The "SumKeys" data set was created by us, therefore every optimization for importing where made while creating the set. <br/> 
+The data set about the sum keys was created by us, therefore every optimization for importing where made while creating the set. <br/> 
 Finally we also import the data set for the inhabitants, since this data set is not part of the main analysis, we decided to also edit it in
 excel to optimize it for the import and remove data that we do not need for the analysis.
  
@@ -491,12 +491,12 @@ solvedCasesFiltered <- filter(germanCaptureSet, detected_cases > 0, suspects > 0
 
 ggplot(solvedCasesFiltered, aes(solved_cases, suspects, color = category)) +
   geom_point() +
-  geom_smooth(method = "lm", fullrange = F, show.legend = F) +
+  geom_smooth(method = "lm", show.legend = F) +
   geom_abline() +
   labs(title = "Suspects vs. Solved", x = "Solved Cases", y ="Suspects")
 ```
 
-This plot shows the general suspect rate, the
+As can be seen, most of the values are below 100.000 solved cases. Afterwards the curves start deviating which is caused by a few values only. Therefore, we have to take a look at how the population looks like using a boxplot: 
 
 ```{r Suspect_Boxplots, fig.height=8, fig.width=15}
 solvedCasesFiltered <- solvedCasesFiltered %>%
@@ -509,8 +509,8 @@ ggplot(solvedCasesFiltered,
   labs(title = "Suspects Rate", x = "Rate by category", y = "Suspects rate")
 ```
 
-All of the inner quartile ranges are very low and the most values are between 1 and 1.6 and most of the outliers are higher than 2. There are few
-outliers below 1, only for crimes associated with fraud, most of the boxplots, even the median is below 1. Paired with the relatively high solvage rate
+All of the inner quartile ranges are small, the most values are between 1 and 1.6 and most of the outliers are higher than 2. There are few
+outliers below 1, only for crimes associated with fraud, the median is below 1. Paired with the relatively high solvage rate
 this could indicate a higher amount of repead offenders for those kind of crimes. <br/>
 There is only one way to determine repead offenders with a high certainty and that is to only look at crimes with 100% solvage rate and a suspect rate 
 below 100%. The lower the suspect rate, the higher the amount of repead offenders.
@@ -545,11 +545,7 @@ After looking at the outliers, we can try to create a linear model, since the fi
 of the variables. We start by looking at the mathematical correlation of the variables.
 
 ```{r Correlation_Check}
-summary(germanCaptureSet$solved_cases)
-nrow(germanCaptureSet %>% filter(solved_cases > 10000))
-germanCasesSet <- germanCaptureSet %>% filter(detected_cases > 0, solved_cases > 0, solved_cases <= 10000)
-summary(germanCasesSet$solved_cases)
-
+germanCasesSet <- germanCaptureSet %>% filter(detected_cases > 0, solved_cases > 0)
 cor(germanCasesSet$solved_cases, germanCasesSet$suspects)
 ```
 
@@ -558,46 +554,97 @@ Now there seems to be a almost 99% correlation, so we proceed with creating and 
 ```{r Linear_Model}
 reg <- lm(solved_cases ~ suspects, data = germanCasesSet)
 
-plot(germanCasesSet$suspects, reg$residuals)
-
 summary(reg)
 ```
-The outliers that we determined before are clearly visible due to the high deviation in the minimum and maximum values of the residuals compared with
-the quartiles. What we can see is, When solved cases are zero, the amount of suspects is -170,71 and with each increase of solved cases by one, the amount of suspects rises by 1,13. Since we can see already that the standard error of solved cases is about 127 cases, the deviation is way too high, at least for the intercept of our model. This impression is confirmed by the probability value, that determines whether suspects do not influence the amount of solved cases, also known as null hypthesis: For solved cases at the intercept, it is 0,18 and therefore, higher than the cut off score of 0,05. The evidence is way too low to asssume that suspects really affect the amount of cases, but only at this point (the intercept).This is confirmed by the second probability value: This one is way below 0,05, the null hypothesis is not confirmed, which means: suspects are statistically significant for a change of solved cases.  Probably the variation of suspects and solved cases is just too high, the degree of freedom shows a high population.  <br/>
-Also, the residual standard error follows the impression of the SSE: It is very high, although we have a high amount of freedom degrees. (710 rows - 2 variables in the model = 708 DF). Looking at the R squared tells us here that, although the RSE and the SSE seem to be very high, the model determines a good fit: 0,9776. Therefore, 97 percent of the variation is explained by the model. What we have learned from the outliers analysis as well was that there can be crimes that can only be commmited my more than one suspects. This also explains the deviation a bit. In conclusion, the model tells us a good fit, but its needs to be taken into account that the amount of DF is very high, therefore the variation can be and is influenced by other variables.  <br/>
 
-In the next step, we will look at the residuals to see the spread:  <br/>
-Residuals are the difference of the observed y values (solved cases) and the predicted values of y  from our dataframe. If the prediction is higher than the observed value, the residual is negative. If predicted and observed value are equal the residual is zero. 
-Therefore if we sum up the collected residuals we know whether our formula is accurate or not: 
-```{r}
-sum(reg$residuals)
+The outliers that we determined before are clearly visible due to the high deviation in the minimum and maximum values of the residuals compared with the quartiles. Furthermore what we can see is that the models standard errors are low, but the residual standard error is high. This is due to the high outliers mentioned already. That is why we now create a model where we filter out the outliers before.
+
+```{r Adjusted_Model}
+Q1 <- quantile(germanCasesSet$solved_cases, .25)
+Q3  <- quantile(germanCasesSet$solved_cases, .75)
+IQR <- IQR(germanCasesSet$solved_cases)
+
+modelSet <- germanCasesSet %>%subset(solved_cases> (Q1 - 1.5*IQR) & solved_cases< (Q3 + 1.5 * IQR))
+
+reg <- lm(solved_cases ~ suspects,data = modelSet)
+summary(reg)
 ```
-The result is almost 0, which is a good sign for the spread of residuals.  <br/>
-Still the frequency of residuals up and below zero has to be analyzed:  <br/>
-```{r}
-hist(reg$residuals)
+
+We can see that, when solved cases are zero, the amount of suspects is about 11 and with each increase of solved cases by one, the amount of suspects 
+increases by 0,92. With about 10 the standard error at the intercept is relatively high, and the null hypothesis has a high percentage to be true. 
+So when interpreting the model the error for a low amount of solved cases is relatively high. For our analysis however this does not reject our
+regression model. <br/>
+The second variable in the model has a low possibility for the null hypothesis to be true, which means, that Suspects are statistically significant 
+for a change of solved cases. <br/>
+Also, the residual standard error follows the impression of the SSE: It is very high, although we have a high amount of freedom degrees
+(595 rows - 2 variables in the model = 593 DF). Looking at the R squared tells us here that, although the RSE and the SSE seem to be very high, the model 
+determines a good fit: 0,9534. Therefore, 95 percent of the variation in the data is explained by the model. <br/>
+In conclusion, the model has a good fit, but it needs to be taken into account that the amount of DF is very high, therefore the variation can be and is 
+influenced by other variables.  <br/>
+In the next step, we will look at the residuals how they spread.  <br/>
+Residuals are the difference of the observed y values (solved cases) and the predicted values of y from our model. If the prediction is higher than the 
+observed value, than the residual is going to be negative. If predicted and observed value are equal the residual is zero. <br/>
+To get a better understanding of the variation of residuals we look at a histogram for this.
+
+```{r Hist_Residuals, fig.height=8, fig.width=15}
+hist(reg$residuals,
+     col = "#cc0000",
+     main = "Resudial spread",
+     xlab = "Residuals")
 ```
-It confirms the sum and our impression that the suspects are not a mainfactor for the change of solved cases.  <br/>
-We still take a look into the plot of the reg:  <br/>
-```{r}
+
+This plot show, that we have a high number of low negative residuals, that are cancelled out by a lower number of high positive residuals. This is
+not a problem, but has to be mentioned for the further analysis.
+
+```{r Reg_Plot, fig.height=8, fig.width=15}
 par(mfrow=c(2,2))
 plot(reg)
 par(mfrow=c(1,1))
 ```
-##### Residuals vs Fitted 
-As we can see, the red line seems to not follow the dotted line because of the non equal spread of positive and negative residuals. Also there are a few observations that highly influence the model, in the following rows of the germanCasesSet: 283,289 and 172. If the predictions of solved cases increase to more than 100.000 the model looses accuracy due to the already mentioned observations and the low amount of observatins in this range. 
 
-##### Normal Q Q 
-We can see skewed residuals in the upper and lower quantiles. This tells us what we already thought. The spread inside the population is not equal, especially in the start and the end. This is confirmed when you take a look back at the intercept values of the reg summary. It also explains the high SSE at the intercept. Nevertheless, the curve looks good, it follows the dotted line.
+Lets look at the plots one by one: <br/>
+<br/>
+Residuals vs Fitted <br/>
+As we can see, the red line follows the dotted line because of the equal spread of positive and negative residuals. There is no pattern visible
+that could hint towards a different relation than a linear regression. Also what was shown before in the histogram is also visible here, there
+are many residuals directly below the red line and some high above. <br/>
+<br/>
+Normal Q Q <br/> 
+We can see residuals spreading out in the upper and lower quantiles. This tells us that the spread inside the population is not equal, especially at 
+the end of the line. This is due to a less observations of solved cases in a range greater than 10.000. The part of the line with the most observations
+follows the dotted line very close and therefore supports this model. <br/>
+<br/>
+Scale location <br/>
+This plot also shows the equal spread of residuals. There are just a few outliers on the upper side, but for most of the line the points seem to be
+scattered evenly and therefore proof a homoscedasticity. <br/>
+<br/>
+Residuals vs Leverage <br/>
+There are no real cases with an extremely high influence on the model, there are only a few with a bit higher influence and like shown before, there
+is a higher amount of them in the positive region. <br/>
+The plots and summary of the linear model show a high accuracy, that is what we now test by predicting a value with the model and calculating the 
+difference to the observed value.
 
-##### Residuals vs Leverage 
-There are a few influential cases here, but only two of them areabove the dotted line: 289 and 172. Since there are a lot of values at the start of the dotted line, we have to be careful interpreting predicted values because: We have four values beneath the red lines which have a high influence. 
+```{r Predict_Values, fig.height=8, fig.width=15}
+actual <- germanCasesSet %>% select(solved_cases,suspects) 
 
-##### Scale location
-This plot also shows the non equal spread of residuals. As we can see, the red line goes up, this shows that thea ssumption of homoscedasticity is not given. The residuals seem also not to be randomly scattered.
+p <-
+  data.frame(
+    suspects = actual$suspects
+  )
+p <- as.data.frame(p)
 
-#### Conclusion Solved Cases vs Suspects
-Since we have proven a high accuracy of the model with the R squared, we could take the model, but when it comes to the intercept the model is not accurate. This makes sense because we are of course not interested in negative solved cases. Also, the results must be treated with caution, since there can be crimes which require multiple suspects by law and the unequal spread of residuals. However we can try to check the accurary to finish this chapter:Lets get the max value of lets say the third quartile: 
+
+predicted <- predict(reg, newdata = p)
+p["predicted"] <- predicted
+p["actual"] <- actual$solved_cases
+
+p <- p %>% mutate(offsetAdjusted = (actual - (predicted - 10)) / actual * 100, 
+                  offset = (actual - predicted) / actual * 100)
+
+summary(p$offset)
+summary(p$offsetAdjusted)
+```
+
 ```{r}
 q3 <- quantile(germanCasesSet$solved_cases,.75)
 val <- filter(germanCasesSet, solved_cases <= q3) 
@@ -606,20 +653,14 @@ max <- max(val$solved_cases)
 (actual <-germanCasesSet %>% select(solved_cases,suspects) %>% filter(solved_cases == max))
 ```
 These are the values of our set. <br>
-Now lets compare the number of suspects calculated by the model using Y (solved cases) = mx + b:  <br/>
-1.267 = 1.137880 * x -170,711755   | +170,711755  <br/>
-1.437,711755 = 1,137880 * x        | /1,137880   <br/>
-1.263,500329 = x (amount of suspects)  <br/>
+We can try to predict the solved cases when we know x. (The amount of suspects) to compare the calculated value with the actual of 1334 cases by 1562 suspects.:  <br/>
+Y = 1,047679*1562-18,641053   <br/>
+Y = 1.617,833545  <br/>
 
-This is the predicted amount of suspects.  The actual amount of suspects is 1675.  <br/>
-But we can also try to predict the solved cases when we know x. (The amount of suspects) to compare the calculated value with the actual of 1267 cases by 1675 suspects.:  <br/>
-Y = 1.137880*1675 - 170,711755   <br/>
-Y = 1735,237245  <br/>
-
-The model predicts an amount of ~ 1735,23 solved cases when we have 1675 suspects.  <br/>
+The model predicts an amount of ~ 1617,83 solved cases when we have 1562 suspects.  <br/>
 The same result is displayed by applying predict():   <br/>
 ```{r}
-p <- as.data.frame(1675)
+p <- as.data.frame(1562)
 colnames(p) <- "suspects"
 
 (predicted <- predict(reg, newdata = p))
@@ -627,18 +668,9 @@ colnames(p) <- "suspects"
 The deviation of actual and predicted value is calculated here: 
 ```{r}
 # in percentage
-
 (1 - (max/predicted))*100
 ```
-This means, the actual value deviates about 26 percent. This is a high deviation and it confirmed what we expected earlier: Solved cases are also influenced by other factors, but the amount of suspects definetely has a high influence. In conclusion: The model predictions for a less amount of solved cases are not accurate, as well as when it comes to solved cases at the end because of outliers. The high deviation in the example we are using here is also explained because of the intercept we had to use in the formula. Since the intercept itself has a high SSE and a high P value, it explains the deviation mentioned above. To check the influence of outliers in the dataframe we can filter by the category with the less amount of outliers which was "Straftaten gegen das Leben" (Crimes against life.)
-
-
-```{r}
-germanCasesLifeCrimes <- filter(germanCasesSet, category == c7)
-regFiltered <- lm(solved_cases~suspects, data =germanCasesLifeCrimes)
-summary(regFiltered)
-```
-The first impression is that the increase of suspects is way lower than it was in the overall model. We could now start to analyse this, but since the degree of freedom is only 10 (caused by filtering the categories), we do not need to move on because the number of samples is simply too low. This also explains why there is only one outlier in the boxplot for this category: 10 DF + 2 variables used in the model = 12 rows only.  
+This means, the actual value deviates about 17 percent. This is a high deviation and it confirmed what we expected earlier: Solved cases are also influenced by other factors, but the amount of suspects definetely has a high influence. In conclusion: The model predictions for a high amount of solved cases are not accurate when it comes to solved cases at the end because of outliers. The high deviation in the example we are using here is also explained because of the intercept we had to use in the formula. Since the intercept itself has a high SSE and a high P value, it explains the deviation mentioned above. To check the influence of outliers in the dataframe we can filter by the category with the less amount of outliers which was "Straftaten gegen das Leben" (Crimes against life.)
 
 ### Suspects and how they are structured
 
@@ -908,7 +940,7 @@ The next Scale-Location plot shows a nice even distribution of points along the 
 The last plot only shows that there are no special cases with an extremely high influence on the regression, there are three cases with a higher
 influence, but not significant. <br/>
 Lets now predict a value for every observation in our data set and calculate the accuracy of the prediction. To visualize this in the end we 
-plot the accuracy in a boxplot ofterwards.
+plot the accuracy in a boxplot afterwards.
 
 ```{r Predict_Multiple_Values, fig.height=8, fig.width=15}
 actual <- modelData %>% select(rel_solvage,relevance,category) %>% filter(rel_solvage > 0)
