@@ -63,8 +63,8 @@ sum keys and are used by the police to study different fields of crimes.
 The first step to every data analysis is to import the data into your project. The data we chose is available as an excel file so we use the 
 package "readxl" to import the sets from excel. For the import to work properly we had to remove some unnecessary header lines in the main data
 set, we did that by specifying a "range" in the read_excel command. <br/>
-The "SumKeys" data set was created by us, therefore every optimization for importing where made while creating the set. <br/> 
-Finally we also import the data set for the inhabitants, since this data set is not part of the main analysis, we decided to also edit it in
+The "SumKeys" data set was created by us, therefore every optimization for importing were made while creating the set, with the use of an online tool scraping the keys and their type from the "Straftatenkatalog" pdf-file. <br/> 
+Finally we also import the data set for the inhabitants, since this data set is not part of the main analysis, we decided to edit it in
 excel to optimize it for the import and remove data that we do not need for the analysis.
  
 ```{R Import}
@@ -222,6 +222,7 @@ c9 <- levels(originalSet$category)[9]
 ### Enter Province ID
 
 To be able to use the provinces later in a map we have to give all the provinces an id.
+Since it is important that each province has the same id as the provinces used in the geojson dataframe, the id has to be the same. Thats why we are adding the id manually and not with a formula. 
 
 ```{r Province_Id}
 province_ids <- data.frame(
@@ -995,7 +996,7 @@ All provinces without any distribution over 500K has a red line that closely fol
 provinces except for the Berlin, Bremen and Hamburg are shifted to the left meaning, that they have more distributions with a lower relevance. This 
 however makes sense since those provinces where there are more types of distributions, have to split all their detected cases with more distributions. <br/>
 Some provinces have an equal spread of relevance for the different distributions, but for example Schleswig-Holstein, Bayern, Brandenburg and 
-Rhainland-Pfalz have a higher relevance for all their distributions under 20K, even though from the height of the bars it does not seem like they have an 
+Rheinland-Pfalz have a higher relevance for all their distributions under 20K, even though from the height of the bars it does not seem like they have an 
 extremely high amount of these distributions. <br/>
 Its also interesting to see, that the distribution unknown category has a mostly equal spread over all the provinces, while Berlin does not have any
 unknown distributions. To be clear, Berlin, Hamburg and Bremen are special cases since they are provinces and cities in one, but for some reason
@@ -1041,7 +1042,7 @@ the distributions over 500K has a sudden bump around the mean of the normal dist
 
 To summarize this data analysis at the end, we can say that there are definitely major factors that influence the solvage rate of a certain crime. It  is
 very important to not treat every crime the same, the major categories of crimes differ a lot in their solvage. It is very possible, that certain crime
-categories are investigated more intense my the police, as well as some crimes are especially easy or hard to solve. <br/>
+categories are investigated more intense by the police, as well as some crimes are especially easy or hard to solve. <br/>
 It is also not possible to take all numbers for whole Germany, many provinces differ from one another in many aspects, so a detailed analysis for those
 is necessary. <br/>
 The last point, that this analysis showed, was that suspects play a major roll in solving crimes and that a majority of them are male, but also that
