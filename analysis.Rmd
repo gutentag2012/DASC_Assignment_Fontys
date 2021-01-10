@@ -540,23 +540,33 @@ that in order to find the one person leading the group, everyone was suspected.
 
 #### Linear model
 
-Since we checked the highest outliers now we can try to generate a linear model, in order to check how the amount of suspects influences the amount of solved cases, by first refilter the germanCaptureSet, to rows with cases only:
+After looking at the outliers, we can try to create a linear model, since the first graph of this chapter seems to hint at a positive correlation
+of the variables. We start by looking at the mathematical correlation of the variables.
 
-```{r}
-germanCasesSet <- germanCaptureSet %>% filter(detected_cases> 0)
-```
-The reason we are not taking the solvedCasesFiltered set is because we removed values without suspects.  <br/>
-Modelling this data would lead to deviating, not accurate results. Now, we first check the correlation of suspects and solved cases in the germanCasesSet: 
-```{r}
+```{r Correlation_Check}
+germanCasesSet <- germanCaptureSet %>% filter(detected_cases > 0, solved_cases > 0)
+
+germanCasesSetQuartile <- quantile(germanCasesSet$suspects/germanCasesSet$solved_cases, 0.75)
+germanCasesSetQuartile2 <- quantile(germanCasesSet$suspects/germanCasesSet$solved_cases, 0.75)
+IQR <- IQR(germanCasesSet$suspects/germanCasesSet$solved_cases)
+
+germanCasesSet <- germanCasesSet %>% filter(suspects/solved_cases <= germanCasesSetQuartile + 1.5*IQR)
+germanCasesSet <- germanCasesSet %>% filter(suspects/solved_cases > germanCasesSetQuartile2 - 1.5*IQR)
+
 cor(germanCasesSet$solved_cases, germanCasesSet$suspects)
 ```
-The correlation leads to the question: Is the amount of solved cases affected by the amount of suspects? 
-First step: Generate linear model using lm():
-```{r}
-reg <- lm(solved_cases~suspects, data =germanCasesSet)
+
+Now there seems to be a almost 99% correlation, so we proceed with creating and summarizing the linear model.
+
+```{r Linear_Model}
+reg <- lm(solved_cases ~ suspects, data = germanCasesSet)
+
+plot(germanCasesSet$suspects, reg$residuals)
+
 summary(reg)
 ```
-First of all, the min and high values are deviating far from the first and third quartile. This signals us that there are outliers already. But lets move on. What we can see is, When solved cases are zero, the amount of suspects is -170,71 and with each increase of solved cases by one, the amount of suspects rises by 1,13. Since we can see already that the standard error of solved cases is about 127 cases, the deviation is way too high, at least for the intercept of our model. This impression is confirmed by the probability value, that determines whether suspects do not influence the amount of solved cases, also known as null hypthesis: For solved cases at the intercept, it is 0,18 and therefore, higher than the cut off score of 0,05. The evidence is way too low to asssume that suspects really affect the amount of cases, but only at this point (the intercept).This is confirmed by the second probability value: This one is way below 0,05, the null hypothesis is not confirmed, which means: suspects are statistically significant for a change of solved cases.  Probably the variation of suspects and solved cases is just too high, the degree of freedom shows a high population.  <br/>
+The outliers that we determined before are clearly visible due to the high deviation in the minimum and maximum values of the residuals compared with
+the quartiles. What we can see is, When solved cases are zero, the amount of suspects is -170,71 and with each increase of solved cases by one, the amount of suspects rises by 1,13. Since we can see already that the standard error of solved cases is about 127 cases, the deviation is way too high, at least for the intercept of our model. This impression is confirmed by the probability value, that determines whether suspects do not influence the amount of solved cases, also known as null hypthesis: For solved cases at the intercept, it is 0,18 and therefore, higher than the cut off score of 0,05. The evidence is way too low to asssume that suspects really affect the amount of cases, but only at this point (the intercept).This is confirmed by the second probability value: This one is way below 0,05, the null hypothesis is not confirmed, which means: suspects are statistically significant for a change of solved cases.  Probably the variation of suspects and solved cases is just too high, the degree of freedom shows a high population.  <br/>
 Also, the residual standard error follows the impression of the SSE: It is very high, although we have a high amount of freedom degrees. (710 rows - 2 variables in the model = 708 DF). Looking at the R squared tells us here that, although the RSE and the SSE seem to be very high, the model determines a good fit: 0,9776. Therefore, 97 percent of the variation is explained by the model. What we have learned from the outliers analysis as well was that there can be crimes that can only be commmited my more than one suspects. This also explains the deviation a bit. In conclusion, the model tells us a good fit, but its needs to be taken into account that the amount of DF is very high, therefore the variation can be and is influenced by other variables.  <br/>
 
 In the next step, we will look at the residuals to see the spread:  <br/>
@@ -635,12 +645,12 @@ The first impression is that the increase of suspects is way lower than it was i
 
 ### Suspects and how they are structured
 
-Now that we analyzed how suspects affect the outcome of an investigation, lets look into what the value behind the suspects is made of. There are three
+Now that we analyzed how suspects affect the outcome of an investigation, lets look into how the suspects are separated on their own. There are three
 variables that describe the suspects more detailed: Male, female and non German suspects. Male and female suspects together add up to the total number 
 of suspects, while the non German suspects are just a part of it. <br/>
 Lets start with looking at the female and male distribution on crimes.
 
-```{r}
+```{r Male_Female_Sus, fig.height=8, fig.width=15}
 ggplot(germanCaptureSet) +
   geom_point(aes(suspects, male), color = "blue") +
   geom_point(aes(suspects, female), color = "red") +
@@ -648,8 +658,8 @@ ggplot(germanCaptureSet) +
   labs(title = "Male and Female Suspect Rate", x = "Number of all Suspects", y = "Male(blue) / Female(red)")
 ```
 
-The graph above shows the number of blue dots as the amount of male suspects, while the red dots represent the amount of female. The black line 
-shows the point where there would be a 100% majority of sex from the suspects. <br/>
+The graph above shows the blue dots as the male suspects, while the red dots represent the female. The black line 
+shows the point where there would be a 100% majority of one sex of the suspects. <br/>
 The plot shows very clear, that the majority of suspects are male. To further analyze this aspect we introduced the "male coefficient" that show
 the percentage of males for the crime, the females would then be whats missing to the 100%.
 
@@ -681,12 +691,24 @@ around the mean value.
 descr(maleCoef$male_coef)
 ```
 
-```{r}
+```{r fig.height=8, fig.width=15}
+
+q3 <- quantile(maleCoef$male_coef, 0.75)
+q1 <- quantile(maleCoef$male_coef, 0.75)
+IQR <- IQR(maleCoef$male_coef)
+
+maleCoef <- maleCoef %>% filter(male_coef <= q3 + 1.5*IQR)
+maleCoef <- maleCoef %>% filter(male_coef > q1 - 1.5*IQR)
+
 reg <- lm(maleCoef$male~maleCoef$suspects)
+
+plot(maleCoef$male, reg$residuals)
 
 summary(reg)
 
+par(mfrow=c(2,2))
 plot(reg)
+par(mfrow=c(1,1))
 ```
 
 
