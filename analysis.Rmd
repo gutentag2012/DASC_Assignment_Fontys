@@ -904,24 +904,23 @@ anova(reg, reg2)
 
 When looking at the RSS of both models it, the RSS of the full model, the one with the multiple linear regression, is much lower and therefore more 
 accurate than the other one. Also the null hypothesis can be rejected when looking at the p-value, therefore we can proceed with the full model. The 
-next step is to assure that there is no collinearity between the different variables of the multiple linear regression and to look at the summary for 
-the model.
+next step would be to assure that there is no collinearity between the different variables of the multiple linear regression, but since we are working
+with a categorical variable we cant check for collinearity and only look at the summary for the model.
 
 ```{r Analyse_Regression_Values}
-vif(reg)
-
 summary(reg)
 ```
 
-Looking at the last values from the vif command, they fall way below 5 and can therefore be read as a low risk of collinearity in this model; 
-so we can proceed. <br/>
-The summary for the different variables affecting the linear regression shows, that the null hypothesis is not valid for most of the variables, there only
-seems to be an issues with the fraud category. Also looking at the estimate for the theft category shows that their impact is larger than the other
-variables and negative, which explains them having a lower curve in the plot before. Also the estimated impact of the categories is low compared
-to the estimate for the relevance, which tells us, that the categories are not the main influence in this model, but still have some influence. <br/>
+The summary for the different variables affecting the linear regression shows, that the null hypothesis is not valid for most of the variables, only 
+the fraud category has a almost 8 percent chance for the null hypothesis to be accepted. We could not find a reason for this, but what we noticed is,
+that the estimate for the theft category shows a larger impact than the other variables and is also negative, which could be explained by their optimal
+curve having a lower slope in the plot before. Also the estimated impact of the categories is in general lower compared
+to the estimate of the relevance which tells us, that the categories are not the main influence in this model. There is one category missing in the
+summary for the regression model, we can only assume that this is an error from the program and that there is no significant difference to the other 
+categories, so we keep analyzing. <br/>
 The standard errors for the variables is quite low and even the residual standard error is not noticeable. All in all the R squared shows, that
 over 79% of the data variation can be explained by this regression model. <br/>
-To be sure about the validity of the and power of this model, we take a look at the graphs created for the regression model.
+To be sure about the validity of the and power of this model, we take a look at the residuals for the regression model.
 
 ```{r Regression_Plots, fig.height=8, fig.width=15}
 par(mfrow=c(2,2))
@@ -958,9 +957,9 @@ predicted <- predict(reg, newdata = p)
 p["predicted"] <- predicted
 p["actual"] <- actual$rel_solvage
 
-p <- p %>%  mutate(offset = (actual - predicted) / actual * 100)
+p <- p %>%  mutate(offset = (actual - predicted) / actual * 100) 
 
-ggplot(p, aes(category, offset, color = category)) +
+ggplot(p %>% filter(offset < 100, offset > -100), aes(category, offset, fill = category)) +
   geom_boxplot() +
   scale_x_discrete(guide = guide_axis(n.dodge = 3)) +
   labs(
@@ -970,16 +969,30 @@ ggplot(p, aes(category, offset, color = category)) +
   )
 ```
 
-In general the accuracy of the regression model is extremely high, all of the boxplots are around 0, but since there is a probability party to every
-regression model, there are also a lot of outliers. The highest outliers are part of the theft category which makes sense, since their value also
-differs a lot from the others.
+Predicting values with the linear model can lead to large differences in the observations, that is why we filtered the larger outliers for the boxplot
+to get a better view on the important values.
+
+```{r Amount_Filtered_Values}
+oldRows <- nrow(p)
+filteredRows <- nrow(p %>% filter(offset < 100, offset > -100))
+(oldRows - filteredRows) / oldRows
+```
+
+So in the boxplot view we filtered 14% of the predicted values with a large offset, but after that the plots displayed gather around 0 and have a very
+small offset. So in general the accuracy of the regression model is high, and the three categories mentioned in the first chapter with the most consistent
+and high solvage rate, have the most accurate predicted values. Most of the highest outliers are part of the theft category which makes sense, since 
+their solvage rate also differs a lot from the others. <br/>
+Also the two categories with the highest p-value in the regression model also have the highest median in the boxplots, so the values predicted for these
+categories is not as close as the one from the other categories. The one category that was missing in the regression summary has a high inner quartile 
+range, but also the median around 0. This boxplot proves the assumption that we made, that the regression values for this category are not far from
+the other categories.
 
 ```{r Prediction_Summary}
 summary(p$offset)
 ```
 
-The general accuracy of the predictions is around 79%, and therefore the same value as the r squared of the regression model. In general the 
-regression model has a high accuracy and is therefore accepted. <br/>
+The general accuracy of the predictions is around 79% (100% - 21%  offset), and interestingly the same value as the r squared of the regression model. 
+In general when looking at the mean and median, the regression model has a high accuracy and is therefore accepted. <br/>
 <br/>
 Now at the end of this chapter lets also look at how the distributions are present in the different provinces.
 
