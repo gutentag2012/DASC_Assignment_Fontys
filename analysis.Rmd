@@ -571,10 +571,10 @@ reg <- lm(solved_cases ~ suspects,data = modelSet)
 summary(reg)
 ```
 
-We can see that, when solved cases are zero, the amount of suspects is about 11 and with each increase of solved cases by one, the amount of suspects 
-increases by 0,92. With about 10 the standard error at the intercept is relatively high, and the null hypothesis has a high percentage to be true. 
+We can see that, when suspects are zero, the amount of solved_cases is about 11 and with each increase of suspects by one, the amount of solved cases 
+increases by 0,92. With about 10 the standard error at the intercept is extremely high, and the null hypothesis has a high percentage to be true. 
 So when interpreting the model the error for a low amount of solved cases is relatively high. For our analysis however this does not reject our
-regression model. <br/>
+regression model, but has to be kept in mind. <br/>
 The second variable in the model has a low possibility for the null hypothesis to be true, which means, that Suspects are statistically significant 
 for a change of solved cases. <br/>
 Also, the residual standard error follows the impression of the SSE: It is very high, although we have a high amount of freedom degrees
