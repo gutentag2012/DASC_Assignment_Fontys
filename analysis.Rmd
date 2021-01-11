@@ -902,9 +902,10 @@ reg2 <- lm(rel_solvage~relevance, data = modelData)
 anova(reg, reg2)
 ```
 
-When looking at the RSS of both models it, the RSS of the first model, the one with the multiple linear regression, is much lower and therefore more 
-accurate than the other one. The next step is to assure that there is no collinearity between the different variables of the multiple linear regression
-and to look at the summary for the model.
+When looking at the RSS of both models it, the RSS of the full model, the one with the multiple linear regression, is much lower and therefore more 
+accurate than the other one. Also the null hypothesis can be rejected when looking at the p-value, therefore we can proceed with the full model. The 
+next step is to assure that there is no collinearity between the different variables of the multiple linear regression and to look at the summary for 
+the model.
 
 ```{r Analyse_Regression_Values}
 vif(reg)
@@ -912,7 +913,8 @@ vif(reg)
 summary(reg)
 ```
 
-Looking at the values from the vif command, there is a low risk of collinearity in this model, so we can proceed. <br/>
+Looking at the last values from the vif command, they fall way below 5 and can therefore be read as a low risk of collinearity in this model; 
+so we can proceed. <br/>
 The summary for the different variables affecting the linear regression shows, that the null hypothesis is not valid for most of the variables, there only
 seems to be an issues with the fraud category. Also looking at the estimate for the theft category shows that their impact is larger than the other
 variables and negative which displays them having a lower curve in the plot before. <br/>
